@@ -29,6 +29,14 @@ app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
+// ── Health routes at ROOT level (no /api prefix) ──────────────────────────
+// Railway and other platforms probe these paths directly.
+// They must respond 200 immediately, even if the DB is down.
+app.get(["/health", "/healthz"], (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// ── All other API routes under /api ───────────────────────────────────────
 app.use("/api", router);
 
 export default app;
