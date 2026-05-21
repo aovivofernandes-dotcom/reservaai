@@ -23,6 +23,7 @@ COPY . .
 # Build the API server (includes TypeScript compilation via esbuild)
 RUN pnpm --filter @workspace/api-server run build
 
+ENV PORT=8080
 EXPOSE 8080
 
 # Run DB migrations then start server
