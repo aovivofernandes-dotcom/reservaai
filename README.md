@@ -1,125 +1,87 @@
-# ReservaAI — Plataforma SaaS de Agendamento Multi-tenant
+# ReservaAI — Plataforma de Agendamento SaaS
 
-Sistema completo de agendamento com painel super-admin, fluxo de onboarding via WhatsApp, IA de atendimento automático, pesquisas de satisfação e gestão de assinaturas.
+Sistema multi-tenant completo: agendamentos, WhatsApp automático, IA de atendimento, pesquisas de satisfação e gestão de assinaturas.
+
+## Rodar agora (Replit)
+
+O MVP está hospedado no Replit. Basta clicar em **Deploy** no painel do Replit.
 
 ## Stack
 
-- **Runtime**: Node.js 24, pnpm workspaces
-- **API**: Express 5 + TypeScript
+- **API**: Node.js 24 + Express 5 + TypeScript
 - **Banco**: PostgreSQL + Drizzle ORM
-- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui + TanStack Query
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
 - **IA**: OpenAI GPT-4o-mini
 - **WhatsApp**: Evolution API (Baileys)
 - **Pagamentos**: MercadoPago
 
-## Estrutura
+## Variáveis de ambiente obrigatórias
 
-```
-artifacts/
-  api-server/     # Backend Express (porta 8080)
-  dashboard/      # Frontend React/Vite (porta 23183)
-lib/
-  db/             # Schema Drizzle + migrations
-  api-spec/       # OpenAPI spec (fonte da verdade)
-  api-zod/        # Schemas Zod gerados
-  api-client-react/ # React Query hooks gerados
-scripts/          # Utilitários
-```
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | Connection string PostgreSQL |
+| `SESSION_SECRET` | Secret JWT (mín. 32 chars) |
+| `ADMIN_PASSWORD` | Senha do super-admin |
 
-## Pré-requisitos
+## Variáveis opcionais (habilitam funcionalidades)
 
-- Node.js 24+
-- pnpm 9+
-- PostgreSQL 15+
+| Variável | Funcionalidade |
+|---|---|
+| `OPENAI_API_KEY` | IA de atendimento automático no WhatsApp |
+| `EVOLUTION_API_URL` | URL da Evolution API para WhatsApp real |
+| `EVOLUTION_API_KEY` | Chave da Evolution API |
+| `MERCADOPAGO_ACCESS_TOKEN` | Cobranças via MercadoPago |
+| `MERCADOPAGO_WEBHOOK_SECRET` | Validação de webhooks MercadoPago |
 
-## Instalação
+## Comandos
 
 ```bash
-# 1. Instalar dependências
+# Instalar dependências
 pnpm install
 
-# 2. Copiar variáveis de ambiente
-cp .env.example .env
-# Edite o .env com seus valores
-
-# 3. Aplicar schema no banco
+# Aplicar schema no banco (primeira vez ou após mudanças)
 pnpm --filter @workspace/db run push
 
-# 4. (Opcional) Regenerar hooks e schemas a partir do OpenAPI
-pnpm --filter @workspace/api-spec run codegen
-```
+# Rodar em desenvolvimento
+pnpm --filter @workspace/api-server run dev   # API na porta 8080
+pnpm --filter @workspace/dashboard run dev    # Dashboard na porta 3000
 
-## Variáveis de Ambiente
+# Build de produção
+pnpm --filter @workspace/api-server run build
 
-| Variável | Descrição | Obrigatório |
-|---|---|---|
-| `DATABASE_URL` | Connection string PostgreSQL | ✅ |
-| `SESSION_SECRET` | Secret JWT (mín. 32 chars) | ✅ |
-| `ADMIN_PASSWORD` | Senha do super-admin | ✅ |
-| `OPENAI_API_KEY` | Chave API OpenAI (IA WhatsApp) | Recomendado |
-| `EVOLUTION_API_URL` | URL da sua Evolution API | WhatsApp |
-| `EVOLUTION_API_KEY` | API Key da Evolution API | WhatsApp |
-| `MERCADOPAGO_ACCESS_TOKEN` | Token MercadoPago | Pagamentos |
-| `MERCADOPAGO_WEBHOOK_SECRET` | Secret webhook MercadoPago | Pagamentos |
-| `PORT` | Porta do servidor (padrão: 8080) | ✅ Railway |
-
-## Rodar em Desenvolvimento
-
-```bash
-# API (porta 8080)
-pnpm --filter @workspace/api-server run dev
-
-# Frontend (porta 23183)
-pnpm --filter @workspace/dashboard run dev
-```
-
-## Build para Produção
-
-```bash
-# Build completo
-pnpm run build
-
-# Iniciar API em produção
+# Iniciar em produção
 pnpm --filter @workspace/api-server run start
 ```
 
-## Deploy no Railway
+## O que está funcionando hoje
 
-O projeto está configurado para deploy no Railway via `railway.toml`.
+- Login super-admin e painel de controle
+- Cadastro de negócios (tenants) com slug/link único
+- Serviços, preços e duração por negócio
+- Agendamentos com calendário
+- Link público de agendamento: `/onboard/:slug`
+- WhatsApp automático via Evolution API (QR code por negócio)
+- IA GPT-4o-mini respondendo dúvidas de clientes no WhatsApp
+- Cancelamento e reagendamento via WhatsApp (fluxo conversacional)
+- Pesquisas de satisfação automáticas pós-atendimento
+- Analytics de receita e agendamentos
+- Assinaturas MercadoPago
 
-### Passos:
+## Estrutura
 
-1. Crie um projeto no [Railway](https://railway.app)
-2. Adicione um serviço PostgreSQL
-3. Conecte este repositório GitHub
-4. Configure as variáveis de ambiente (ver tabela acima)
-5. O Railway detecta automaticamente o `railway.toml` e executa o build
+```
+artifacts/api-server/   → Backend Express (todas as rotas, jobs, webhooks)
+artifacts/dashboard/    → Frontend React (painel admin + negócios + público)
+lib/db/                 → Schema Drizzle + migrações
+lib/api-spec/           → OpenAPI spec (fonte da verdade)
+lib/api-zod/            → Schemas Zod gerados
+lib/api-client-react/   → React Query hooks gerados
+```
 
-### Configuração Railway:
+## Para Railway (futuro)
 
-- **Build**: `pnpm install && pnpm --filter @workspace/db run push && pnpm --filter @workspace/api-server run build`
-- **Start**: `pnpm --filter @workspace/api-server run start`
-- **Health check**: `GET /api/health`
-
-## Checklist pós-deploy
-
-- [ ] `DATABASE_URL` configurado
-- [ ] `SESSION_SECRET` configurado (gere com `openssl rand -hex 32`)
-- [ ] `ADMIN_PASSWORD` configurado
-- [ ] Rodar `pnpm --filter @workspace/db run push` para criar as tabelas
-- [ ] Configurar Evolution API URL/Key no painel admin → Configurações
-- [ ] Apontar webhook da Evolution API para `https://SEU_DOMINIO/api/evolution/webhook`
-
-## Funcionalidades
-
-- **Super-admin dashboard**: analytics, CRUD de tenants, gestão de assinaturas
-- **Onboarding de clientes**: formulário público por slug `/onboard/:slug`
-- **WhatsApp automático**: fluxo conversacional de cadastro via Evolution API
-- **IA de atendimento**: GPT-4o-mini responde dúvidas dos clientes automaticamente
-- **Cancelamento/reagendamento via WA**: fluxo de estado salvo no banco
-- **Pesquisas de satisfação**: envio automático pós-atendimento
-- **Multi-tenant**: cada negócio tem sua própria instância WhatsApp isolada
-
-## Licença
-
-Privado — todos os direitos reservados.
+Quando migrar para Railway:
+- `Dockerfile` → serviço api-server
+- `Dockerfile.dashboard` → serviço dashboard
+- Configurar cada serviço separadamente no painel Railway
+- Sem `railway.toml` global (cada serviço tem sua própria config no UI)
