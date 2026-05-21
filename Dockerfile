@@ -20,11 +20,16 @@ RUN pnpm install --no-frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the API server (includes TypeScript compilation via esbuild)
+# Build the API server
 RUN pnpm --filter @workspace/api-server run build
+
+# Run DB migrations at build time (requires DATABASE_URL build arg)
+# If DATABASE_URL is not available at build time, migrations will run on first start via the app
+ARG DATABASE_URL
+RUN if [ -n "$DATABASE_URL" ]; then DATABASE_URL=$DATABASE_URL pnpm --filter @workspace/db run push; fi
 
 ENV PORT=8080
 EXPOSE 8080
 
-# Run DB migrations then start server
-CMD pnpm --filter @workspace/db run push && pnpm --filter @workspace/api-server run start
+# Start immediately — no DB push here
+CMD ["pnpm", "--filter", "@workspace/api-server", "run", "start"]
