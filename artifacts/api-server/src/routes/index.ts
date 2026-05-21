@@ -1,0 +1,42 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import authRouter from "./auth";
+import adminTenantsRouter from "./admin/tenants";
+import adminSubscriptionsRouter from "./admin/subscriptions";
+import adminAnalyticsRouter from "./admin/analytics";
+import adminRevenueRouter from "./admin/revenue";
+import adminOnboardingRouter from "./admin/onboarding";
+import adminWhatsappConfigRouter from "./admin/whatsapp-config";
+import adminWhatsappTestRouter from "./admin/whatsapp-test";
+import publicRouter from "./public";
+import signupRouter from "./signup";
+import businessRouter from "./business";
+import billingRouter from "./billing";
+import whatsappRouter from "./whatsapp";
+import metaOauthRouter from "./meta-oauth";
+import evolutionWebhookRouter from "./evolution-webhook";
+import businessSurveysRouter from "./business-surveys";
+import businessAiLogsRouter from "./business-ai-logs";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(authRouter);
+router.use(adminTenantsRouter);
+router.use(adminSubscriptionsRouter);
+router.use(adminAnalyticsRouter);
+router.use(adminRevenueRouter);
+router.use(adminOnboardingRouter);
+router.use(adminWhatsappConfigRouter);
+router.use(adminWhatsappTestRouter);
+router.use(signupRouter);
+router.use(publicRouter);
+router.use(businessRouter);
+router.use(businessSurveysRouter);
+router.use(businessAiLogsRouter);
+router.use(billingRouter);
+router.use(whatsappRouter);
+router.use(metaOauthRouter);
+router.use(evolutionWebhookRouter);
+
+export default router;

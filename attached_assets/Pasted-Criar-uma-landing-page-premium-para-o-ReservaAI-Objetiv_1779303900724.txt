@@ -1,0 +1,122 @@
+Criar uma landing page premium para o ReservaAI.
+
+Objetivo:
+Transformar a página inicial pública em uma landing moderna, profissional e focada em conversão, melhor que concorrentes como Bookoint.
+
+Estilo:
+- SaaS premium
+- moderno
+- mobile first
+- roxo/branco
+- limpo
+- elegante
+- parecido com startup moderna
+- sem excesso de texto
+- com foco em WhatsApp + agendamento automático
+
+Estrutura da landing:
+
+1. Header
+- Logo ReservaAI
+- Menu: Funcionalidades, Para quem é, Como funciona, Preços
+- Botão: Começar grátis
+
+2. Hero principal
+Título:
+“Automatize seus agendamentos pelo WhatsApp”
+
+Subtítulo:
+“Clientes agendam sozinhos, você acompanha tudo pelo painel e economiza horas de atendimento todos os dias.”
+
+Botões:
+“Começar grátis”
+“Ver demonstração”
+
+Adicionar mockup visual do painel no celular.
+
+3. Benefícios
+Cards:
+- Agendamento online 24/7
+- Confirmação pelo WhatsApp
+- Clientes ilimitados
+- Lembretes automáticos
+- Painel simples
+- Mais tempo livre
+
+4. Como funciona
+3 passos:
+1. Cadastre seus serviços
+2. Compartilhe seu link
+3. Receba agendamentos automaticamente
+
+5. WhatsApp inteligente
+Seção destacada:
+“Menos mensagens manuais. Mais reservas.”
+Explicar:
+- respostas automáticas
+- confirmação de agendamento
+- lembrete 24h antes
+- suporte ao cliente
+
+6. Para quem é
+Cards:
+- Barbearias
+- Salões de beleza
+- Estética
+- Clínicas
+- Tattoo
+- Consultorias
+- Personal trainer
+- Pequenos negócios
+
+7. Demonstração do produto
+Mostrar cards simulando:
+- Dashboard
+- Serviços
+- Clientes
+- Link de agendamento
+- WhatsApp
+
+8. Planos
+Por enquanto não integrar Mercado Pago.
+Mostrar apenas:
+Starter — Teste grátis
+Pro — R$97/mês
+Premium — R$197/mês
+
+Botão dos planos:
+“Falar com suporte”
+
+Link:
+https://wa.me/5592992208060?text=Olá%20quero%20ativar%20meu%20plano%20ReservaAI
+
+9. CTA final
+Título:
+“Comece hoje seu atendimento automático”
+
+Subtítulo:
+“Teste grátis e veja seus clientes agendando sozinhos.”
+
+Botão:
+“Criar conta grátis”
+
+10. Footer
+- ReservaAI
+- Agendamentos inteligentes para negócios modernos
+- WhatsApp
+- Termos
+- Privacidade
+
+Requisitos técnicos:
+- mobile first
+- responsivo perfeito no iPhone Safari
+- sem overflow horizontal
+- visual premium
+- botões grandes
+- CTA claro
+- não usar textos genéricos demais
+- não copiar design do Bookoint
+- criar identidade própria do ReservaAI
+- manter rotas existentes funcionando
+- não quebrar painel admin
+- republish no final

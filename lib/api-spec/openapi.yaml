@@ -1,0 +1,1411 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.2.0
+  description: SaaS Onboarding Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: admin
+    description: Super admin operations
+  - name: public
+    description: Public tenant operations
+  - name: whatsapp
+    description: WhatsApp webhook and messaging
+  - name: business
+    description: Business owner self-service operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [auth]
+      summary: Admin logout
+      responses:
+        "204":
+          description: Logged out
+
+  /admin/tenants:
+    get:
+      operationId: listTenants
+      tags: [admin]
+      summary: List all tenants
+      responses:
+        "200":
+          description: Tenant list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tenant"
+    post:
+      operationId: createTenant
+      tags: [admin]
+      summary: Create a new tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantInput"
+      responses:
+        "201":
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+
+  /admin/tenants/{tenantId}:
+    get:
+      operationId: getTenant
+      tags: [admin]
+      summary: Get tenant by ID
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateTenant
+      tags: [admin]
+      summary: Update tenant
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantUpdate"
+      responses:
+        "200":
+          description: Updated tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTenant
+      tags: [admin]
+      summary: Delete tenant
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/tenants/{tenantId}/subscriptions:
+    post:
+      operationId: createSubscription
+      tags: [admin]
+      summary: Create subscription for tenant
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionInput"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /admin/subscriptions:
+    get:
+      operationId: listSubscriptions
+      tags: [admin]
+      summary: List all subscriptions
+      responses:
+        "200":
+          description: Subscription list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+
+  /admin/subscriptions/{subscriptionId}:
+    patch:
+      operationId: updateSubscription
+      tags: [admin]
+      summary: Update subscription
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionUpdate"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "404":
+          description: Not found
+
+  /admin/analytics:
+    get:
+      operationId: getAdminAnalytics
+      tags: [admin]
+      summary: Get platform-wide analytics
+      responses:
+        "200":
+          description: Admin analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAnalytics"
+
+  /admin/tenants/{tenantId}/analytics:
+    get:
+      operationId: getTenantAnalytics
+      tags: [admin]
+      summary: Get analytics for a specific tenant
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tenant analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantAnalytics"
+        "404":
+          description: Not found
+
+  /admin/tenants/{tenantId}/onboarding:
+    get:
+      operationId: listOnboardingSubmissions
+      tags: [admin]
+      summary: List onboarding submissions for a tenant
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Submissions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OnboardingSubmission"
+
+  /admin/onboarding/{submissionId}:
+    patch:
+      operationId: updateOnboardingSubmission
+      tags: [admin]
+      summary: Update onboarding submission status
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingStatusUpdate"
+      responses:
+        "200":
+          description: Updated submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingSubmission"
+        "404":
+          description: Not found
+
+  /public/tenants/{slug}:
+    get:
+      operationId: getPublicTenant
+      tags: [public]
+      summary: Get public tenant info by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public tenant info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicTenant"
+        "404":
+          description: Not found
+
+  /public/tenants/{slug}/onboarding:
+    post:
+      operationId: submitOnboarding
+      tags: [public]
+      summary: Submit customer onboarding form
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingInput"
+      responses:
+        "201":
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingSubmission"
+        "404":
+          description: Tenant not found
+
+  /whatsapp/webhook:
+    get:
+      operationId: verifyWhatsappWebhook
+      tags: [whatsapp]
+      summary: Verify WhatsApp webhook (Meta challenge)
+      parameters:
+        - name: hub.mode
+          in: query
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge echoed
+        "403":
+          description: Forbidden
+    post:
+      operationId: receiveWhatsappWebhook
+      tags: [whatsapp]
+      summary: Receive WhatsApp webhook events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappWebhookPayload"
+      responses:
+        "200":
+          description: Accepted
+
+  /whatsapp/send:
+    post:
+      operationId: sendWhatsappMessage
+      tags: [whatsapp]
+      summary: Send a WhatsApp message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappSendInput"
+      responses:
+        "200":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappSendResult"
+
+  /whatsapp/sessions:
+    get:
+      operationId: listWhatsappSessions
+      tags: [whatsapp]
+      summary: List WhatsApp sessions
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sessions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhatsappSession"
+
+  /public/signup:
+    post:
+      operationId: signup
+      tags: [public]
+      summary: Self-service business signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupInput"
+      responses:
+        "201":
+          description: Account created with auto-login token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupResult"
+        "400":
+          description: Validation error
+        "409":
+          description: Email already registered
+
+  /auth/business-login:
+    post:
+      operationId: businessLogin
+      tags: [auth]
+      summary: Business owner login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessLoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessToken"
+        "401":
+          description: Invalid credentials
+
+  /auth/business-me:
+    get:
+      operationId: getBusinessMe
+      tags: [auth]
+      summary: Get current business user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessUser"
+        "401":
+          description: Unauthorized
+
+  /auth/business-logout:
+    post:
+      operationId: businessLogout
+      tags: [auth]
+      summary: Business logout
+      responses:
+        "204":
+          description: Logged out
+
+  /business/dashboard:
+    get:
+      operationId: getBusinessDashboard
+      tags: [business]
+      summary: Get business dashboard data
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessDashboard"
+        "401":
+          description: Unauthorized
+
+  /business/onboarding:
+    get:
+      operationId: getBusinessOnboarding
+      tags: [business]
+      summary: Get onboarding wizard status
+      responses:
+        "200":
+          description: Onboarding status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingStatus"
+        "401":
+          description: Unauthorized
+
+  /business/onboarding/whatsapp:
+    patch:
+      operationId: setupBusinessWhatsapp
+      tags: [business]
+      summary: Save WhatsApp configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappSetupInput"
+      responses:
+        "200":
+          description: WhatsApp configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingStatus"
+        "401":
+          description: Unauthorized
+
+  /admin/signup-analytics:
+    get:
+      operationId: getSignupAnalytics
+      tags: [admin]
+      summary: Get signup and conversion analytics
+      responses:
+        "200":
+          description: Signup analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupAnalytics"
+
+  /admin/revenue:
+    get:
+      operationId: getRevenueAnalytics
+      tags: [admin]
+      summary: Get revenue analytics (MRR, failed payments, etc.)
+      responses:
+        "200":
+          description: Revenue analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueAnalytics"
+
+  /billing/create-subscription:
+    post:
+      operationId: createMpSubscription
+      tags: [business]
+      summary: Create a Mercado Pago subscription (returns init_point URL)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMpSubscriptionInput"
+      responses:
+        "200":
+          description: Subscription init point returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateMpSubscriptionResult"
+        "401":
+          description: Unauthorized
+
+  /billing/webhook:
+    post:
+      operationId: receiveMpWebhook
+      tags: [business]
+      summary: Mercado Pago webhook (public — HMAC-verified)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MpWebhookNotification"
+      responses:
+        "200":
+          description: Accepted
+
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [business]
+      summary: Get current billing status for authenticated tenant
+      responses:
+        "200":
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatus"
+        "401":
+          description: Unauthorized
+
+  /billing/cancel:
+    post:
+      operationId: cancelBillingSubscription
+      tags: [business]
+      summary: Cancel current subscription
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatus"
+        "401":
+          description: Unauthorized
+
+  /billing/payment-history:
+    get:
+      operationId: getPaymentHistory
+      tags: [business]
+      summary: Get payment event history for authenticated tenant
+      responses:
+        "200":
+          description: Payment events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentEvent"
+        "401":
+          description: Unauthorized
+
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+      required:
+        - token
+        - expiresAt
+
+    LoginInput:
+      type: object
+      properties:
+        password:
+          type: string
+      required:
+        - password
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        subdomain:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        whatsappPhoneNumberId:
+          type: ["string", "null"]
+        businessType:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        openingHours:
+          type: ["string", "null"]
+        trialEndsAt:
+          type: ["string", "null"]
+        onboardingStep:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - subdomain
+        - email
+        - plan
+        - status
+        - createdAt
+        - updatedAt
+
+    TenantInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        whatsappPhoneNumberId:
+          type: string
+      required:
+        - name
+        - email
+
+    TenantUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+        phone:
+          type: string
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        whatsappPhoneNumberId:
+          type: string
+
+    PublicTenant:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - status
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        plan:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled, expired, trialing, past_due, paused]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+        amount:
+          type: ["string", "null"]
+        currency:
+          type: string
+        startedAt:
+          type: string
+        expiresAt:
+          type: ["string", "null"]
+        currentPeriodStart:
+          type: ["string", "null"]
+        currentPeriodEnd:
+          type: ["string", "null"]
+        mercadoPagoSubscriptionId:
+          type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+        nextBillingAt:
+          type: ["string", "null"]
+        failedPaymentsCount:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - tenantId
+        - plan
+        - status
+        - billingCycle
+        - currency
+        - startedAt
+        - failedPaymentsCount
+        - createdAt
+
+    CreateMpSubscriptionInput:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [pro, premium]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+        paymentMethod:
+          type: string
+          enum: [credit_card, pix]
+        backUrl:
+          type: string
+      required:
+        - plan
+        - billingCycle
+
+    CreateMpSubscriptionResult:
+      type: object
+      properties:
+        initPoint:
+          type: string
+        subscriptionId:
+          type: string
+        preapprovalId:
+          type: ["string", "null"]
+      required:
+        - initPoint
+        - subscriptionId
+
+    BillingStatus:
+      type: object
+      properties:
+        subscription:
+          allOf:
+            - $ref: "#/components/schemas/Subscription"
+          nullable: true
+        trialEndsAt:
+          type: ["string", "null"]
+        trialDaysLeft:
+          type: ["integer", "null"]
+        isTrialing:
+          type: boolean
+        isActive:
+          type: boolean
+        isPastDue:
+          type: boolean
+        planLocked:
+          type: boolean
+      required:
+        - isTrialing
+        - isActive
+        - isPastDue
+        - planLocked
+
+    PaymentEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        subscriptionId:
+          type: ["string", "null"]
+        mercadoPagoPaymentId:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [approved, pending, in_process, rejected, cancelled, refunded, charged_back]
+        paymentMethod:
+          type: ["string", "null"]
+        amount:
+          type: string
+        currency:
+          type: string
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - tenantId
+        - status
+        - amount
+        - currency
+        - createdAt
+
+    MpWebhookNotification:
+      type: object
+      properties:
+        id:
+          type: ["string", "null"]
+        type:
+          type: ["string", "null"]
+        action:
+          type: ["string", "null"]
+        data:
+          type: object
+          additionalProperties: true
+
+    RevenueAnalytics:
+      type: object
+      properties:
+        mrr:
+          type: number
+          description: Monthly Recurring Revenue in BRL
+        arr:
+          type: number
+          description: Annual Recurring Revenue in BRL
+        activeSubscriptions:
+          type: integer
+        trialingSubscriptions:
+          type: integer
+        pastDueSubscriptions:
+          type: integer
+        cancelledThisMonth:
+          type: integer
+        totalRevenue:
+          type: number
+        failedPaymentsCount:
+          type: integer
+        recentPayments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentEvent"
+      required:
+        - mrr
+        - arr
+        - activeSubscriptions
+        - trialingSubscriptions
+        - pastDueSubscriptions
+        - cancelledThisMonth
+        - totalRevenue
+        - failedPaymentsCount
+        - recentPayments
+
+    SubscriptionInput:
+      type: object
+      properties:
+        plan:
+          type: string
+          minLength: 1
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+        amount:
+          type: string
+        currency:
+          type: string
+        startedAt:
+          type: string
+        expiresAt:
+          type: string
+      required:
+        - plan
+
+    SubscriptionUpdate:
+      type: object
+      properties:
+        plan:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled, expired, trialing, past_due, paused]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+        amount:
+          type: string
+        expiresAt:
+          type: string
+
+    OnboardingSubmission:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        businessName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        address:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, reviewed, approved, rejected]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - tenantId
+        - businessName
+        - contactName
+        - email
+        - phone
+        - status
+        - createdAt
+        - updatedAt
+
+    OnboardingInput:
+      type: object
+      properties:
+        businessName:
+          type: string
+          minLength: 1
+        contactName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 1
+        address:
+          type: string
+        industry:
+          type: string
+        notes:
+          type: string
+      required:
+        - businessName
+        - contactName
+        - email
+        - phone
+
+    OnboardingStatusUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, reviewed, approved, rejected]
+      required:
+        - status
+
+    AdminAnalytics:
+      type: object
+      properties:
+        totalTenants:
+          type: integer
+        activeTenants:
+          type: integer
+        totalSubscriptions:
+          type: integer
+        activeSubscriptions:
+          type: integer
+        totalOnboardingSubmissions:
+          type: integer
+        pendingOnboardingSubmissions:
+          type: integer
+        totalWhatsappSessions:
+          type: integer
+        recentTenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tenant"
+      required:
+        - totalTenants
+        - activeTenants
+        - totalSubscriptions
+        - activeSubscriptions
+        - totalOnboardingSubmissions
+        - pendingOnboardingSubmissions
+        - totalWhatsappSessions
+        - recentTenants
+
+    TenantAnalytics:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        onboardingCount:
+          type: integer
+        whatsappSessionCount:
+          type: integer
+        whatsappMessageCount:
+          type: integer
+        pendingSubmissions:
+          type: integer
+        approvedSubmissions:
+          type: integer
+      required:
+        - tenantId
+        - onboardingCount
+        - whatsappSessionCount
+        - whatsappMessageCount
+        - pendingSubmissions
+        - approvedSubmissions
+
+    WhatsappSession:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: ["string", "null"]
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [active, completed, abandoned]
+        flowStep:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - phone
+        - status
+        - flowStep
+        - createdAt
+        - updatedAt
+
+    WhatsappWebhookPayload:
+      type: object
+      properties:
+        object:
+          type: string
+        entry:
+          type: array
+          items:
+            type: object
+      required:
+        - object
+
+    WhatsappSendInput:
+      type: object
+      properties:
+        to:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        tenantId:
+          type: string
+      required:
+        - to
+        - message
+
+    WhatsappSendResult:
+      type: object
+      properties:
+        messageId:
+          type: ["string", "null"]
+        status:
+          type: string
+      required:
+        - status
+
+    SignupInput:
+      type: object
+      properties:
+        businessName:
+          type: string
+          minLength: 1
+        ownerName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        whatsapp:
+          type: string
+        businessType:
+          type: string
+        address:
+          type: string
+        openingHours:
+          type: string
+      required:
+        - businessName
+        - ownerName
+        - email
+        - password
+        - whatsapp
+        - businessType
+
+    BusinessUser:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - tenantId
+        - name
+        - email
+        - role
+        - createdAt
+
+    SignupResult:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+        user:
+          $ref: "#/components/schemas/BusinessUser"
+        tenant:
+          $ref: "#/components/schemas/Tenant"
+      required:
+        - token
+        - expiresAt
+        - user
+        - tenant
+
+    BusinessLoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    BusinessToken:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+        user:
+          $ref: "#/components/schemas/BusinessUser"
+      required:
+        - token
+        - expiresAt
+        - user
+
+    BusinessDashboard:
+      type: object
+      properties:
+        tenant:
+          $ref: "#/components/schemas/Tenant"
+        subscription:
+          allOf:
+            - $ref: "#/components/schemas/Subscription"
+          nullable: true
+        onboardingStep:
+          type: string
+        trialEndsAt:
+          type: ["string", "null"]
+        submissionsCount:
+          type: integer
+        whatsappSessionsCount:
+          type: integer
+      required:
+        - tenant
+        - onboardingStep
+        - submissionsCount
+        - whatsappSessionsCount
+
+    OnboardingStatus:
+      type: object
+      properties:
+        step:
+          type: string
+          enum: [profile, whatsapp, launch, complete]
+        whatsappConfigured:
+          type: boolean
+        profileComplete:
+          type: boolean
+        launchReady:
+          type: boolean
+        shareUrl:
+          type: ["string", "null"]
+      required:
+        - step
+        - whatsappConfigured
+        - profileComplete
+        - launchReady
+
+    WhatsappSetupInput:
+      type: object
+      properties:
+        phoneNumberId:
+          type: string
+          minLength: 1
+        verifyToken:
+          type: string
+      required:
+        - phoneNumberId
+
+    SignupEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        businessType:
+          type: ["string", "null"]
+        plan:
+          type: string
+        status:
+          type: string
+        trialEndsAt:
+          type: ["string", "null"]
+        onboardingStep:
+          type: ["string", "null"]
+        whatsappConnected:
+          type: ["boolean", "null"]
+        subscriptionStatus:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - plan
+        - status
+        - createdAt
+
+    SignupAnalytics:
+      type: object
+      properties:
+        totalSignups:
+          type: integer
+        trialCount:
+          type: integer
+        activeCount:
+          type: integer
+        conversionRate:
+          type: number
+        recentSignups:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignupEntry"
+      required:
+        - totalSignups
+        - trialCount
+        - activeCount
+        - conversionRate
+        - recentSignups

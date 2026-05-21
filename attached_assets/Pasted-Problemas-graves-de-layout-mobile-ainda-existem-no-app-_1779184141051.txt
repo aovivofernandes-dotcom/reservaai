@@ -1,0 +1,104 @@
+Problemas graves de layout mobile ainda existem no app, principalmente na tela “Serviços”.
+
+Corrigir URGENTE a estrutura responsiva do iPhone/Safari:
+
+1. As telas estão entrando desalinhadas
+- conteúdo começa “torto”
+- margens quebradas
+- elementos flutuando
+- sensação de app fora de esquadro
+
+2. Quando abre “Serviços”
+- cards ficam deslocados
+- modal empurra layout
+- aparece margem lateral errada
+- tela balança horizontalmente
+
+3. Aplicar correção GLOBAL no app:
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+4. Todos os containers:
+- usar width: 100%
+- max-width: 100vw
+- min-width: 0
+- box-sizing: border-box
+
+5. Corrigir Safari iOS:
+- flex items quebrando largura
+- modal deslocando viewport
+- teclado virtual empurrando layout
+- scroll lateral invisível
+
+6. Layout precisa abrir FIXO e CENTRALIZADO:
+- sem “andar” para os lados
+- sem conteúdo cortado
+- sem espaços fantasmas
+- sem margem sobrando
+
+7. Navbar inferior:
+- fixa corretamente
+- centralizada
+- ícones alinhados
+- sem tremedeira ao trocar telas
+
+8. Modal de adicionar serviço:
+- largura correta no iPhone
+- botão totalmente visível
+- teclado não pode quebrar layout
+- footer fixo no modal
+
+9. Objetivo final:
+O app deve parecer um aplicativo premium nativo iOS.
+Tudo alinhado, reto, proporcional e estável.
+Sem aparência de site improvisado.
+
+--------------------------------------------------
+
+MELHORIAS UX MOBILE
+
+10. Modal “Adicionar serviço”
+O modal está abrindo desalinhado, muito para cima e fora do centro visual.
+
+Corrigir:
+- abrir como bottom sheet elegante
+- alinhado corretamente
+- largura 100% dentro da tela
+- sem ultrapassar margens
+- sem deslocar para o lado
+- conteúdo reto e centralizado
+- aparência premium estilo iOS
+
+11. Quando abrir teclado:
+- modal não pode quebrar
+- modal não pode subir torto
+- botão continuar sempre visível
+- layout não pode descer junto
+
+12. A tela de fundo está descendo quando abre modal.
+Corrigir:
+- manter página fixa
+- não mover conteúdo principal
+- apenas overlay escuro suave
+- sem alterar scroll da tela principal
+
+13. Remover ícone de sair/logout do topo
+O ícone de logout no header principal passa sensação errada.
+
+Remover:
+- botão sair do topo de TODAS as telas
+
+Mover apenas para:
+Configurações > Conta > Sair
+
+14. Melhorar experiência geral:
+- sem tremedeira
+- sem elementos flutuando
+- sem quebra lateral
+- sem scroll horizontal
+- tudo fixo e elegante
+
+15. Republish após concluir tudo.
