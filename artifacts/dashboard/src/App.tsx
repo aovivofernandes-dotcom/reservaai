@@ -80,8 +80,8 @@ function AppRoutes() {
       <Route path="/super-admin" component={DashboardPage} />
       <Route path="/" component={LandingPage} />
 
-      {/* ── Public customer onboarding form ── */}
-      <Route path="/onboard/:slug" component={OnboardPage} />
+      {/* ── /onboard/:slug → booking page (same experience as /agendar/:slug) ── */}
+      <Route path="/onboard/:slug" component={PublicBookingPage} />
 
       {/* ── Public booking page — /agendar/:slug and legacy /:slug ── */}
       <Route path="/agendar/:slug" component={PublicBookingPage} />
