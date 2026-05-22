@@ -148,6 +148,34 @@ export default function LandingPage() {
 
   return (
     <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif", overflowX: "hidden", background: "#fff" }}>
+    <style>{`
+      @media (max-width: 767px) {
+        .lp-hero { padding: 36px 20px 40px !important; }
+        .lp-hero-title { font-size: 30px !important; margin-bottom: 14px !important; }
+        .lp-hero-sub { font-size: 15px !important; margin-bottom: 24px !important; }
+        .lp-hero-badge { margin-bottom: 16px !important; }
+        .lp-hero-social { margin-top: 20px !important; }
+        .lp-hero-cta-wrap { gap: 8px !important; }
+        .lp-hero-cta-btn { height: 50px !important; font-size: 15px !important; border-radius: 14px !important; }
+        .lp-phone-wrap { display: none !important; }
+        .lp-section { padding: 48px 20px !important; }
+        .lp-section-title { margin-bottom: 32px !important; }
+        .lp-section-h2 { font-size: 26px !important; margin-bottom: 10px !important; }
+        .lp-section-sub { font-size: 14px !important; }
+        .lp-card { padding: 18px !important; }
+        .lp-step-card { padding: 20px 18px 18px !important; }
+        .lp-pricing-section { padding: 48px 20px !important; }
+        .lp-pricing-title { margin-bottom: 32px !important; }
+        .lp-cta-section { padding: 48px 20px !important; }
+        .lp-footer { padding: 28px 20px !important; }
+        .lp-wa-section { padding: 48px 20px !important; }
+        .lp-forwhom { padding: 48px 20px !important; }
+        .lp-product-section { padding: 48px 20px !important; }
+        .lp-signup-form input, .lp-signup-form select { height: 46px !important; font-size: 15px !important; }
+        .lp-signup-form button { height: 50px !important; font-size: 15px !important; }
+        .lp-signup-wrap { padding: 20px !important; border-radius: 20px !important; }
+      }
+    `}</style>
 
       {/* ── HEADER ── */}
       <header style={{
@@ -215,7 +243,7 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO ── */}
-      <section style={{ background: "linear-gradient(160deg, #0f0528 0%, #1e0a4e 40%, #2d1279 100%)", padding: "72px 20px 80px", overflow: "hidden", position: "relative" }}>
+      <section className="lp-hero" style={{ background: "linear-gradient(160deg, #0f0528 0%, #1e0a4e 40%, #2d1279 100%)", padding: "72px 20px 80px", overflow: "hidden", position: "relative" }}>
         {/* Background decorations */}
         <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: "rgba(124,58,237,0.15)", filter: "blur(80px)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", bottom: -80, left: -80, width: 300, height: 300, borderRadius: "50%", background: "rgba(37,211,102,0.08)", filter: "blur(60px)", pointerEvents: "none" }} />
@@ -223,12 +251,12 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 48 }}>
           {/* Text block */}
           <div style={{ textAlign: "center", maxWidth: 700 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(124,58,237,0.25)", border: "1px solid rgba(124,58,237,0.4)", borderRadius: 99, padding: "6px 14px", marginBottom: 24 }}>
+            <div className="lp-hero-badge" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(124,58,237,0.25)", border: "1px solid rgba(124,58,237,0.4)", borderRadius: 99, padding: "6px 14px", marginBottom: 24 }}>
               <WaIcon size={14} />
               <span style={{ color: "#c4b5fd", fontSize: 12, fontWeight: 600 }}>Integração nativa com WhatsApp Business</span>
             </div>
 
-            <h1 style={{ color: "#fff", fontWeight: 900, fontSize: "clamp(32px, 7vw, 58px)", lineHeight: 1.1, letterSpacing: "-0.03em", margin: "0 0 20px" }}>
+            <h1 className="lp-hero-title" style={{ color: "#fff", fontWeight: 900, fontSize: "clamp(32px, 7vw, 58px)", lineHeight: 1.1, letterSpacing: "-0.03em", margin: "0 0 20px" }}>
               Automatize seus<br />
               <span style={{ background: "linear-gradient(90deg, #a78bfa, #34d399)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 agendamentos pelo
@@ -236,12 +264,12 @@ export default function LandingPage() {
               <br />WhatsApp
             </h1>
 
-            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: "clamp(15px, 2.5vw, 18px)", lineHeight: 1.65, margin: "0 0 36px", maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
+            <p className="lp-hero-sub" style={{ color: "rgba(255,255,255,0.65)", fontSize: "clamp(15px, 2.5vw, 18px)", lineHeight: 1.65, margin: "0 0 36px", maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
               Clientes agendam sozinhos, você acompanha tudo pelo painel e economiza horas de atendimento todos os dias.
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-              <button onClick={() => navigate("/signup")}
+            <div className="lp-hero-cta-wrap" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              <button className="lp-hero-cta-btn" onClick={() => navigate("/signup")}
                 style={{ width: "100%", maxWidth: 360, height: 56, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", letterSpacing: "-0.01em", boxShadow: "0 8px 32px rgba(124,58,237,0.5)" }}
               >Começar grátis — sem cartão</button>
               <a href="#demo"
@@ -254,7 +282,7 @@ export default function LandingPage() {
             </div>
 
             {/* Social proof */}
-            <div style={{ marginTop: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+            <div className="lp-hero-social" style={{ marginTop: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
               <div style={{ display: "flex" }}>
                 {["#7c3aed","#6d28d9","#5b21b6","#4c1d95","#2e1065"].map((bg, i) => (
                   <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", background: bg, border: "2px solid rgba(255,255,255,0.2)", marginLeft: i ? -8 : 0 }} />
@@ -266,15 +294,15 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Phone mockup */}
-          <div id="demo" style={{ display: "flex", justifyContent: "center" }}>
+          {/* Phone mockup — hidden on mobile to save vertical space */}
+          <div id="demo" className="lp-phone-wrap" style={{ display: "flex", justifyContent: "center" }}>
             <PhoneMockup />
           </div>
         </div>
       </section>
 
       {/* ── BENEFITS ── */}
-      <section id="funcionalidades" style={{ padding: "80px 20px", background: "#fff" }}>
+      <section id="funcionalidades" className="lp-section" style={{ padding: "80px 20px", background: "#fff" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <p style={{ color: "#7c3aed", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>Funcionalidades</p>
@@ -309,7 +337,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section id="como-funciona" style={{ padding: "80px 20px", background: "#f9fafb" }}>
+      <section id="como-funciona" className="lp-section" style={{ padding: "80px 20px", background: "#f9fafb" }}>
         <div style={{ maxWidth: 880, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <p style={{ color: "#7c3aed", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>Como funciona</p>
@@ -337,7 +365,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── WHATSAPP HIGHLIGHT ── */}
-      <section style={{ padding: "80px 20px", background: "linear-gradient(135deg, #0f0528 0%, #1e0a4e 100%)", position: "relative", overflow: "hidden" }}>
+      <section className="lp-wa-section" style={{ padding: "80px 20px", background: "linear-gradient(135deg, #0f0528 0%, #1e0a4e 100%)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -60, right: -60, width: 300, height: 300, borderRadius: "50%", background: "rgba(37,211,102,0.1)", filter: "blur(60px)", pointerEvents: "none" }} />
         <div style={{ maxWidth: 880, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 360px), 1fr))", gap: 48, alignItems: "center" }}>
           <div>
@@ -394,7 +422,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOR WHOM ── */}
-      <section id="para-quem" style={{ padding: "80px 20px", background: "#fff" }}>
+      <section id="para-quem" className="lp-forwhom" style={{ padding: "80px 20px", background: "#fff" }}>
         <div style={{ maxWidth: 880, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <p style={{ color: "#7c3aed", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>Para quem é</p>
@@ -440,7 +468,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRODUCT DEMO ── */}
-      <section style={{ padding: "80px 20px", background: "#f9fafb" }}>
+      <section className="lp-product-section" style={{ padding: "80px 20px", background: "#f9fafb" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <p style={{ color: "#7c3aed", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>O produto</p>
@@ -540,7 +568,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="precos" style={{ padding: "80px 20px", background: "#fff" }}>
+      <section id="precos" className="lp-pricing-section" style={{ padding: "80px 20px", background: "#fff" }}>
         <div style={{ maxWidth: 880, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <p style={{ color: "#7c3aed", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>Preços</p>
@@ -622,7 +650,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section style={{ padding: "80px 20px", background: "linear-gradient(135deg, #0f0528 0%, #1e0a4e 100%)", textAlign: "center" }}>
+      <section className="lp-cta-section" style={{ padding: "80px 20px", background: "linear-gradient(135deg, #0f0528 0%, #1e0a4e 100%)", textAlign: "center" }}>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <h2 style={{ color: "#fff", fontWeight: 900, fontSize: "clamp(28px, 5vw, 44px)", letterSpacing: "-0.03em", margin: "0 0 18px" }}>
             Comece hoje seu atendimento automático
@@ -648,7 +676,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: "#060213", padding: "40px 20px 32px" }}>
+      <footer className="lp-footer" style={{ background: "#060213", padding: "40px 20px 32px" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 32, marginBottom: 40 }}>
             {/* Brand */}
