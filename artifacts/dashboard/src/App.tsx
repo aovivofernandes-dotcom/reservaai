@@ -83,7 +83,8 @@ function AppRoutes() {
       {/* ── Public customer onboarding form ── */}
       <Route path="/onboard/:slug" component={OnboardPage} />
 
-      {/* ── Public booking page (must be last — catch-all by slug) ── */}
+      {/* ── Public booking page — /agendar/:slug and legacy /:slug ── */}
+      <Route path="/agendar/:slug" component={PublicBookingPage} />
       <Route path="/:slug" component={PublicBookingPage} />
 
       <Route component={NotFound} />
