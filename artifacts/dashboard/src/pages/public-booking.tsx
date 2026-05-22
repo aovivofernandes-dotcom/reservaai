@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Sparkles,
   Check,
+  Plus,
 } from "lucide-react";
 
 interface TenantInfo {
@@ -21,7 +22,6 @@ interface TenantInfo {
   businessType: string | null;
   phone: string | null;
   address: string | null;
-  logoUrl?: string | null;
 }
 
 interface ServiceInfo {
@@ -37,13 +37,17 @@ interface BookingData {
   services: ServiceInfo[];
 }
 
-function formatPrice(price: string) {
-  const n = parseFloat(price);
-  if (isNaN(n) || n === 0) return "Grátis";
+function formatCurrency(n: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 }
 
-function formatPriceNum(price: string) {
+function formatPrice(price: string) {
+  const n = parseFloat(price);
+  if (isNaN(n) || n === 0) return "Grátis";
+  return formatCurrency(n);
+}
+
+function priceNum(price: string) {
   return parseFloat(price) || 0;
 }
 
@@ -70,16 +74,25 @@ function todayISO() {
 }
 
 function applyPhoneMask(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 11);
-  if (digits.length === 0) return "";
-  if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
 const INPUT =
-  "w-full border border-gray-200 rounded-2xl px-4 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all bg-white";
-const INPUT_H = { minHeight: 52 };
+  "w-full border border-gray-200 rounded-2xl px-4 text-[15px] text-gray-900 placeholder:text-gray-400 " +
+  "focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all bg-white";
+const INPUT_H: React.CSSProperties = { height: 52 };
+
+const emptyForm = () => ({
+  clientName: "",
+  clientPhone: "",
+  date: todayISO(),
+  time: "09:00",
+  notes: "",
+});
 
 export default function PublicBookingPage() {
   const params = useParams<{ slug: string }>();
@@ -89,17 +102,12 @@ export default function PublicBookingPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // Multi-select services
   const [selectedServices, setSelectedServices] = useState<ServiceInfo[]>([]);
   const [step, setStep] = useState<"services" | "form" | "success">("services");
 
-  const [form, setForm] = useState({
-    clientName: "",
-    clientPhone: "",
-    date: todayISO(),
-    time: "09:00",
-    notes: "",
-  });
+  // Form data is NEVER reset when navigating back to services —
+  // only cleared when starting a fresh booking from the success screen.
+  const [form, setForm] = useState(emptyForm());
   const [booking, setBooking] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -118,25 +126,36 @@ export default function PublicBookingPage() {
   function toggleService(service: ServiceInfo) {
     setSelectedServices((prev) => {
       const exists = prev.find((s) => s.id === service.id);
-      if (exists) return prev.filter((s) => s.id !== service.id);
-      return [...prev, service];
+      return exists ? prev.filter((s) => s.id !== service.id) : [...prev, service];
     });
   }
 
+  // Go to form — PRESERVE existing form data (don't reset)
   function goToForm() {
     if (selectedServices.length === 0) return;
-    setForm({ clientName: "", clientPhone: "", date: todayISO(), time: "09:00", notes: "" });
     setFormError("");
     setStep("form");
   }
 
-  function backToServices() {
+  // Go back to services from the form — preserve EVERYTHING (services + form data)
+  function backToServicesFromForm() {
     setStep("services");
   }
 
-  const totalPrice = selectedServices.reduce((sum, s) => sum + formatPriceNum(s.price), 0);
+  // Start a completely new booking from success screen
+  function startNewBooking() {
+    setSelectedServices([]);
+    setForm(emptyForm());
+    setFormError("");
+    setStep("services");
+  }
+
+  const totalPrice = selectedServices.reduce((sum, s) => sum + priceNum(s.price), 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
-  const allFree = selectedServices.every((s) => formatPriceNum(s.price) === 0);
+  const allFree = selectedServices.every((s) => priceNum(s.price) === 0);
+  const formReady =
+    form.clientName.trim().length > 0 &&
+    form.clientPhone.trim().length >= 14; // (XX) XXXXX-XXXX
 
   async function submitBooking() {
     setFormError("");
@@ -147,21 +166,21 @@ export default function PublicBookingPage() {
     setBooking(true);
     try {
       const scheduledAt = new Date(`${form.date}T${form.time}:00`).toISOString();
-      const requests = selectedServices.map((service) =>
-        fetch(`/api/public/booking/${slug}/appointments`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            clientName: form.clientName.trim(),
-            clientPhone: form.clientPhone.trim(),
-            serviceId: service.id,
-            scheduledAt,
-            notes: form.notes.trim() || null,
-          }),
-        })
+      const responses = await Promise.all(
+        selectedServices.map((service) =>
+          fetch(`/api/public/booking/${slug}/appointments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clientName: form.clientName.trim(),
+              clientPhone: form.clientPhone.trim(),
+              serviceId: service.id,
+              scheduledAt,
+              notes: form.notes.trim() || null,
+            }),
+          })
+        )
       );
-
-      const responses = await Promise.all(requests);
       const failed = responses.find((r) => !r.ok);
       if (failed) {
         const err = await failed.json() as { error?: string };
@@ -185,7 +204,6 @@ export default function PublicBookingPage() {
     );
   }
 
-  // ── Not found ─────────────────────────────────────────────────────────────
   if (notFound || !data) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-5 text-center">
@@ -201,14 +219,13 @@ export default function PublicBookingPage() {
   const { tenant, services } = data;
   const initial = tenant.name.charAt(0).toUpperCase();
 
-  // ── WhatsApp message for success ──────────────────────────────────────────
   function buildWhatsAppText() {
     const dateLabel = new Date(form.date + "T12:00:00").toLocaleDateString("pt-BR", {
       day: "2-digit", month: "long",
     });
-    const serviceNames = selectedServices.map((s) => s.name).join(", ");
+    const names = selectedServices.map((s) => s.name).join(", ");
     return encodeURIComponent(
-      `Olá! Acabei de agendar: ${serviceNames} para ${dateLabel} às ${form.time}. Meu nome é ${form.clientName}.`
+      `Olá! Acabei de agendar: ${names} para ${dateLabel} às ${form.time}. Meu nome é ${form.clientName}.`
     );
   }
 
@@ -220,7 +237,7 @@ export default function PublicBookingPage() {
     return (
       <div
         className="min-h-screen bg-gradient-to-b from-violet-50 to-white flex flex-col items-center justify-center px-5 text-center"
-        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-emerald-100">
           <CheckCircle2 className="w-12 h-12 text-emerald-500" />
@@ -229,22 +246,24 @@ export default function PublicBookingPage() {
         <p className="text-gray-500 text-base mt-3 leading-relaxed max-w-xs">
           {selectedServices.length === 1 ? (
             <>
-              <span className="font-semibold text-gray-700">{selectedServices[0].name}</span> confirmado para{" "}
+              <span className="font-semibold text-gray-700">{selectedServices[0].name}</span>{" "}
+              confirmado para{" "}
               <span className="font-semibold text-gray-700">{dateLabel} às {form.time}</span>.
             </>
           ) : (
             <>
-              <span className="font-semibold text-gray-700">{selectedServices.length} serviços</span> confirmados para{" "}
+              <span className="font-semibold text-gray-700">{selectedServices.length} serviços</span>{" "}
+              confirmados para{" "}
               <span className="font-semibold text-gray-700">{dateLabel} às {form.time}</span>.
             </>
           )}
         </p>
 
-        <p className="text-gray-600 text-sm mt-2 font-medium">
+        <p className="text-gray-700 text-sm mt-3 font-semibold">
           Seu agendamento foi registrado com sucesso.
         </p>
         {tenant.phone && (
-          <p className="text-gray-400 text-sm mt-1.5 max-w-xs">
+          <p className="text-gray-400 text-sm mt-1.5 max-w-xs leading-relaxed">
             Você também pode receber os detalhes pelo WhatsApp.
           </p>
         )}
@@ -263,12 +282,12 @@ export default function PublicBookingPage() {
             </a>
           )}
           <button
-            onClick={backToServices}
+            onClick={startNewBooking}
             className="flex items-center justify-center gap-2 w-full rounded-2xl border border-gray-200 bg-white text-[15px] text-gray-600 font-semibold hover:bg-gray-50 transition-all active:scale-[0.98]"
             style={{ height: 52 }}
           >
-            <ArrowLeft className="w-4 h-4" />
-            Ver outros serviços
+            <Plus className="w-4 h-4" />
+            Novo agendamento
           </button>
         </div>
 
@@ -287,24 +306,38 @@ export default function PublicBookingPage() {
           style={{ height: 60, paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
           <button
-            onClick={backToServices}
+            onClick={backToServicesFromForm}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0"
+            aria-label="Voltar para serviços"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-gray-900 font-bold text-[15px] truncate">
-              {selectedServices.length === 1 ? selectedServices[0].name : `${selectedServices.length} serviços`}
+              {selectedServices.length === 1
+                ? selectedServices[0].name
+                : `${selectedServices.length} serviços selecionados`}
             </p>
             <p className="text-gray-400 text-xs">{tenant.name}</p>
           </div>
+          {/* "Editar serviços" chip */}
+          <button
+            onClick={backToServicesFromForm}
+            className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-600 text-xs font-semibold hover:bg-violet-100 transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            Editar
+          </button>
         </div>
 
         {/* Scrollable form area */}
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{ WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}
+        >
           <div className="px-4 pt-4 pb-4 space-y-4 max-w-lg mx-auto w-full">
 
-            {/* Services summary */}
+            {/* ── Services summary card ── */}
             <div className="bg-violet-50 border border-violet-100 rounded-2xl px-4 py-3 space-y-2">
               {selectedServices.map((service) => (
                 <div key={service.id} className="flex items-center gap-3">
@@ -323,14 +356,15 @@ export default function PublicBookingPage() {
                 <div className="pt-2 mt-1 border-t border-violet-200 flex items-center justify-between">
                   <span className="text-violet-600 text-xs font-bold">Total</span>
                   <span className="text-violet-700 text-xs font-bold">
-                    {allFree ? "Grátis" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalPrice)}
-                    {" · "}{durationLabel(totalDuration)}
+                    {allFree ? "Grátis" : formatCurrency(totalPrice)}
+                    {" · "}
+                    {durationLabel(totalDuration)}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Name */}
+            {/* ── Seu nome ── */}
             <div>
               <label className="text-gray-700 text-[13px] font-bold block mb-2">
                 Seu nome <span className="text-violet-500">*</span>
@@ -348,7 +382,7 @@ export default function PublicBookingPage() {
               </div>
             </div>
 
-            {/* Phone */}
+            {/* ── WhatsApp ── */}
             <div>
               <label className="text-gray-700 text-[13px] font-bold block mb-2">
                 WhatsApp <span className="text-violet-500">*</span>
@@ -357,7 +391,9 @@ export default function PublicBookingPage() {
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   value={form.clientPhone}
-                  onChange={(e) => setForm((f) => ({ ...f, clientPhone: applyPhoneMask(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, clientPhone: applyPhoneMask(e.target.value) }))
+                  }
                   placeholder="(92) 99999-9999"
                   inputMode="tel"
                   autoComplete="tel"
@@ -367,41 +403,41 @@ export default function PublicBookingPage() {
               </div>
             </div>
 
-            {/* Date + Time side by side */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-gray-700 text-[13px] font-bold block mb-2">
-                  <Calendar className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
-                  Data <span className="text-violet-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={form.date}
-                  min={todayISO()}
-                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  className={INPUT}
-                  style={INPUT_H}
-                />
-              </div>
-              <div>
-                <label className="text-gray-700 text-[13px] font-bold block mb-2">
-                  <Clock className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
-                  Horário <span className="text-violet-500">*</span>
-                </label>
-                <select
-                  value={form.time}
-                  onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                  className={INPUT}
-                  style={INPUT_H}
-                >
-                  {TIME_SLOTS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+            {/* ── Data (full width) ── */}
+            <div>
+              <label className="text-gray-700 text-[13px] font-bold block mb-2">
+                <Calendar className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+                Data <span className="text-violet-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={form.date}
+                min={todayISO()}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                className={INPUT}
+                style={INPUT_H}
+              />
             </div>
 
-            {/* Notes */}
+            {/* ── Horário (full width, separate row) ── */}
+            <div>
+              <label className="text-gray-700 text-[13px] font-bold block mb-2">
+                <Clock className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+                Horário <span className="text-violet-500">*</span>
+              </label>
+              <select
+                value={form.time}
+                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                className={INPUT}
+                style={INPUT_H}
+              >
+                {TIME_SLOTS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* ── Observação ── */}
             <div>
               <label className="text-gray-700 text-[13px] font-bold block mb-2">
                 Observação{" "}
@@ -411,7 +447,7 @@ export default function PublicBookingPage() {
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 placeholder="Alguma informação adicional..."
-                rows={2}
+                rows={3}
                 className={`${INPUT} py-3 resize-none`}
               />
             </div>
@@ -422,7 +458,6 @@ export default function PublicBookingPage() {
               </p>
             )}
 
-            {/* Extra bottom spacer so content clears the sticky button */}
             <div className="h-2" />
           </div>
         </div>
@@ -434,8 +469,8 @@ export default function PublicBookingPage() {
         >
           <button
             onClick={submitBooking}
-            disabled={booking}
-            className="w-full rounded-2xl bg-violet-600 hover:bg-violet-700 text-white font-black text-[16px] flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-violet-200"
+            disabled={booking || !formReady}
+            className="w-full rounded-2xl bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white font-black text-[16px] flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-lg shadow-violet-200 disabled:shadow-none disabled:active:scale-100"
             style={{ height: 56 }}
           >
             {booking ? (
@@ -447,15 +482,20 @@ export default function PublicBookingPage() {
               </>
             )}
           </button>
+          {!formReady && !booking && (
+            <p className="text-center text-gray-400 text-xs mt-2">
+              Preencha seu nome e WhatsApp para continuar
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  // ── Services list (fixed layout — header sticky, list scrolls) ────────────
+  // ── Services list ─────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-50">
-      {/* ── Hero header — fixed at top ──────────────────────────────────── */}
+      {/* ── Hero header — shrinks to fit, never scrolls ── */}
       <div
         className="shrink-0 bg-gradient-to-b from-violet-700 to-violet-600"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
@@ -486,10 +526,14 @@ export default function PublicBookingPage() {
         </div>
       </div>
 
-      {/* ── Scrollable services list ────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
-        <div className="max-w-lg mx-auto px-4 pt-5 w-full space-y-3"
-          style={{ paddingBottom: selectedServices.length > 0 ? "8rem" : "2rem" }}
+      {/* ── Scrollable services list ── */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}
+      >
+        <div
+          className="max-w-lg mx-auto px-4 pt-5 w-full space-y-3"
+          style={{ paddingBottom: selectedServices.length > 0 ? "9rem" : "2.5rem" }}
         >
           {services.length === 0 ? (
             <div className="bg-white border border-gray-100 rounded-3xl p-10 text-center shadow-sm">
@@ -512,17 +556,16 @@ export default function PublicBookingPage() {
                         : "bg-white border-gray-100 hover:border-violet-200 hover:shadow-md"
                     }`}
                   >
-                    {/* Icon */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? "bg-violet-600" : "bg-violet-50 group-hover:bg-violet-100"
-                    }`}>
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected ? "bg-violet-600" : "bg-violet-50 group-hover:bg-violet-100"
+                      }`}
+                    >
                       {isSelected
                         ? <Check className="w-5 h-5 text-white" />
-                        : <Clock className="w-5 h-5 text-violet-500" />
-                      }
+                        : <Clock className="w-5 h-5 text-violet-500" />}
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className={`font-bold text-[15px] leading-tight ${isSelected ? "text-violet-900" : "text-gray-900"}`}>
                         {service.name}
@@ -540,16 +583,14 @@ export default function PublicBookingPage() {
                       </div>
                     </div>
 
-                    {/* Check / Arrow */}
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-md ${
-                      isSelected
-                        ? "bg-violet-600 shadow-violet-200"
-                        : "bg-violet-600 group-hover:bg-violet-700 shadow-violet-200"
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-md shadow-violet-200 ${
+                        isSelected ? "bg-violet-600" : "bg-violet-600 group-hover:bg-violet-700"
+                      }`}
+                    >
                       {isSelected
                         ? <Check className="w-4 h-4 text-white" />
-                        : <ChevronRight className="w-4 h-4 text-white" />
-                      }
+                        : <ChevronRight className="w-4 h-4 text-white" />}
                     </div>
                   </button>
                 );
@@ -561,21 +602,21 @@ export default function PublicBookingPage() {
         </div>
       </div>
 
-      {/* ── Sticky bottom CTA — appears when ≥1 service selected ─────────── */}
+      {/* ── Sticky bottom CTA — visible when ≥1 service selected ── */}
       {selectedServices.length > 0 && (
         <div
-          className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 shadow-2xl"
+          className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 shadow-2xl shadow-black/10"
           style={{ paddingBottom: "calc(0.875rem + env(safe-area-inset-bottom, 0px))" }}
         >
           {/* Summary row */}
-          <div className="flex items-center justify-between mb-2.5 px-1">
+          <div className="flex items-center justify-between mb-2.5 px-0.5">
             <span className="text-gray-500 text-[13px]">
               {selectedServices.length === 1
                 ? "1 serviço selecionado"
                 : `${selectedServices.length} serviços selecionados`}
             </span>
             <span className="text-violet-700 text-[13px] font-bold">
-              {allFree ? "Grátis" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalPrice)}
+              {allFree ? "Grátis" : formatCurrency(totalPrice)}
               {totalDuration > 0 && ` · ${durationLabel(totalDuration)}`}
             </span>
           </div>
@@ -585,7 +626,9 @@ export default function PublicBookingPage() {
             style={{ height: 56 }}
           >
             <Sparkles className="w-4 h-4" />
-            Continuar
+            {form.clientName.trim()
+              ? "Confirmar Agendamento"
+              : "Continuar"}
           </button>
         </div>
       )}
