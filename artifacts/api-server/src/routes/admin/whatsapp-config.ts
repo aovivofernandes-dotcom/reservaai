@@ -78,6 +78,62 @@ router.get(
   },
 );
 
+// ── Automation settings ─────────────────────────────────────────────────────
+
+const AUTOMATION_KEYS = [
+  "wa_auto_reply",
+  "wa_booking_confirmation",
+  "wa_reminder_24h",
+  "wa_satisfaction_survey",
+] as const;
+type AutomationKey = (typeof AUTOMATION_KEYS)[number];
+
+// GET /api/admin/whatsapp-automations
+router.get(
+  "/admin/whatsapp-automations",
+  requireAdmin,
+  async (_req, res): Promise<void> => {
+    const rows = await db
+      .select()
+      .from(platformSettingsTable)
+      .where(
+        or(
+          ...AUTOMATION_KEYS.map((k) => eq(platformSettingsTable.key, k)),
+        ),
+      );
+    const map = Object.fromEntries(rows.map((r) => [r.key, r.value === "true"]));
+    res.json({
+      autoReply: map["wa_auto_reply"] ?? true,
+      bookingConfirmation: map["wa_booking_confirmation"] ?? true,
+      reminder24h: map["wa_reminder_24h"] ?? true,
+      satisfactionSurvey: map["wa_satisfaction_survey"] ?? false,
+    });
+  },
+);
+
+// PATCH /api/admin/whatsapp-automations
+router.patch(
+  "/admin/whatsapp-automations",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const body = req.body as { key?: string; value?: boolean };
+    if (!body.key || !AUTOMATION_KEYS.includes(body.key as AutomationKey)) {
+      res.status(400).json({ error: "Invalid key" });
+      return;
+    }
+    const val = body.value ? "true" : "false";
+    await db
+      .insert(platformSettingsTable)
+      .values({ key: body.key, value: val })
+      .onConflictDoUpdate({
+        target: platformSettingsTable.key,
+        set: { value: val, updatedAt: new Date() },
+      });
+    req.log.info({ key: body.key, value: val }, "WhatsApp automation updated");
+    res.json({ success: true });
+  },
+);
+
 // PUT /api/admin/whatsapp-config — persist URL + API key
 router.put(
   "/admin/whatsapp-config",
