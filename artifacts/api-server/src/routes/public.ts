@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne, gte, lt } from "drizzle-orm";
 import {
   db,
   tenantsTable,
@@ -322,6 +322,60 @@ router.get(
   },
 );
 
+// ── Availability ──────────────────────────────────────────────────────────────
+
+router.get(
+  "/public/booking/:slug/availability",
+  async (req, res): Promise<void> => {
+    const { slug } = req.params as { slug: string };
+    const { date } = req.query as { date?: string };
+
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      res.status(400).json({ error: "date param required (YYYY-MM-DD)" });
+      return;
+    }
+
+    const [tenant] = await db
+      .select({ id: tenantsTable.id })
+      .from(tenantsTable)
+      .where(eq(tenantsTable.slug, slug));
+
+    if (!tenant) {
+      res.status(404).json({ error: "Empresa não encontrada" });
+      return;
+    }
+
+    // Cover the full UTC day — works for all BR timezones (UTC-2 to UTC-5)
+    const dayStart = new Date(`${date}T00:00:00.000Z`);
+    const dayEnd = new Date(`${date}T23:59:59.999Z`);
+
+    const rows = await db
+      .select({
+        scheduledAt: appointmentsTable.scheduledAt,
+        durationMinutes: servicesTable.durationMinutes,
+      })
+      .from(appointmentsTable)
+      .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
+      .where(
+        and(
+          eq(appointmentsTable.tenantId, tenant.id),
+          ne(appointmentsTable.status, "cancelled"),
+          gte(appointmentsTable.scheduledAt, dayStart),
+          lt(appointmentsTable.scheduledAt, dayEnd),
+        ),
+      );
+
+    res.json({
+      appointments: rows.map((r) => ({
+        scheduledAt: r.scheduledAt.toISOString(),
+        durationMinutes: r.durationMinutes ?? 60,
+      })),
+    });
+  },
+);
+
+// ── Create appointment ────────────────────────────────────────────────────────
+
 router.post(
   "/public/booking/:slug/appointments",
   async (req, res): Promise<void> => {
@@ -343,11 +397,62 @@ router.post(
       serviceId?: string;
       scheduledAt?: string;
       notes?: string;
+      totalDurationMinutes?: number;
     };
 
     if (!body.clientName?.trim() || !body.clientPhone?.trim() || !body.scheduledAt) {
       res.status(400).json({ error: "Nome, telefone e horário são obrigatórios" });
       return;
+    }
+
+    const newStart = new Date(body.scheduledAt);
+
+    // Resolve duration: prefer explicit totalDurationMinutes, else look up service
+    let newDuration = body.totalDurationMinutes ?? 0;
+    if (!newDuration && body.serviceId) {
+      const [svc] = await db
+        .select({ durationMinutes: servicesTable.durationMinutes })
+        .from(servicesTable)
+        .where(eq(servicesTable.id, body.serviceId));
+      newDuration = svc?.durationMinutes ?? 60;
+    }
+    if (!newDuration) newDuration = 60;
+
+    const newEnd = new Date(newStart.getTime() + newDuration * 60 * 1000);
+
+    // Query all non-cancelled appointments on the same UTC day
+    const dayStart = new Date(`${body.scheduledAt.slice(0, 10)}T00:00:00.000Z`);
+    const dayEnd = new Date(`${body.scheduledAt.slice(0, 10)}T23:59:59.999Z`);
+
+    const existing = await db
+      .select({
+        scheduledAt: appointmentsTable.scheduledAt,
+        clientPhone: appointmentsTable.clientPhone,
+        durationMinutes: servicesTable.durationMinutes,
+      })
+      .from(appointmentsTable)
+      .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
+      .where(
+        and(
+          eq(appointmentsTable.tenantId, tenant.id),
+          ne(appointmentsTable.status, "cancelled"),
+          gte(appointmentsTable.scheduledAt, dayStart),
+          lt(appointmentsTable.scheduledAt, dayEnd),
+        ),
+      );
+
+    // Check overlap with appointments from a DIFFERENT client
+    for (const appt of existing) {
+      if (appt.clientPhone === body.clientPhone.trim()) continue; // same session (multi-service)
+      const existDur = appt.durationMinutes ?? 60;
+      const existEnd = new Date(appt.scheduledAt.getTime() + existDur * 60 * 1000);
+      // Two intervals overlap: newStart < existEnd AND existStart < newEnd
+      if (newStart < existEnd && appt.scheduledAt < newEnd) {
+        res.status(409).json({
+          error: "Este horário já foi reservado. Escolha outro horário disponível.",
+        });
+        return;
+      }
     }
 
     const [appointment] = await db
@@ -358,7 +463,7 @@ router.post(
         clientName: body.clientName.trim(),
         clientPhone: body.clientPhone.trim(),
         clientEmail: body.clientEmail?.trim() ?? null,
-        scheduledAt: new Date(body.scheduledAt),
+        scheduledAt: newStart,
         notes: body.notes?.trim() ?? null,
       })
       .returning();
