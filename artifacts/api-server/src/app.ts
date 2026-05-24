@@ -26,8 +26,8 @@ app.use(
   }),
 );
 app.use(cors());
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true, limit: "5mb" }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 // ── Health routes at ROOT level (no /api prefix) ──────────────────────────
 // Railway and other platforms probe these paths directly.
