@@ -34,6 +34,7 @@ import BusinessClientsPage from "@/pages/business-clients";
 import BusinessAutomationPage from "@/pages/business-automation";
 import BusinessSettingsPage from "@/pages/business-settings";
 import BusinessServicesPage from "@/pages/business-services";
+import BusinessSurveysPage from "@/pages/business-surveys";
 
 // Public booking
 import PublicBookingPage from "@/pages/public-booking";
@@ -69,6 +70,7 @@ function AppRoutes() {
       <Route path="/business/automation" component={BusinessAutomationPage} />
       <Route path="/business/settings" component={BusinessSettingsPage} />
       <Route path="/business/services" component={BusinessServicesPage} />
+      <Route path="/business/surveys" component={BusinessSurveysPage} />
 
       {/* ── Admin / super-admin ── */}
       <Route path="/admin" component={DashboardPage} />
