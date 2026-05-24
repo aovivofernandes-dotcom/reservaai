@@ -22,6 +22,7 @@ interface TenantInfo {
   businessType: string | null;
   phone: string | null;
   address: string | null;
+  logoUrl: string | null;
 }
 
 interface ServiceInfo {
@@ -622,8 +623,13 @@ export default function PublicBookingPage() {
       >
         <div className="max-w-lg mx-auto px-4 pt-8 pb-7 w-full">
           <div className="flex flex-col items-center text-center">
-            <div className="w-20 h-20 rounded-3xl bg-white/20 border-2 border-white/30 flex items-center justify-center shadow-xl shadow-violet-900/30 mb-4 backdrop-blur-sm">
-              <span className="text-white font-black text-3xl">{initial}</span>
+            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-xl shadow-violet-900/30 mb-4 border-2 border-white/30">
+              {tenant.logoUrl
+                ? <img src={tenant.logoUrl} alt={tenant.name} className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <span className="text-white font-black text-3xl">{initial}</span>
+                  </div>
+              }
             </div>
             <h1 className="text-white font-black text-2xl tracking-tight leading-tight">
               {tenant.name}
