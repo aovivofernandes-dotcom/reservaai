@@ -4,6 +4,7 @@ import {
   uuid,
   timestamp,
   pgEnum,
+  integer,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -36,6 +37,8 @@ export const appointmentsTable = pgTable("appointments", {
   clientPhone: text("client_phone").notNull(),
   clientEmail: text("client_email"),
   scheduledAt: timestamp("scheduled_at").notNull(),
+  endTime: timestamp("end_time"),
+  totalDurationMinutes: integer("total_duration_minutes"),
   notes: text("notes"),
   status: appointmentStatusEnum("status").notNull().default("pending"),
   whatsappStatus: whatsappNotifStatusEnum("whatsapp_status")
