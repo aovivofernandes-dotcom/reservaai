@@ -575,7 +575,7 @@ export default function BusinessSettingsPage() {
               as="select" options={BUSINESS_CATEGORIES}
               onChange={(n, v) => setForm(f => ({ ...f, [n]: v }))} />
             <Field label="Descrição curta" name="description" value={form.description} editing={editingProfile}
-              as="textarea" placeholder="Ex: Barbearia premium com atendimento personalizado"
+              as="textarea" placeholder="Ex: Atendimento profissional com agendamento rápido e personalizado"
               onChange={(n, v) => setForm(f => ({ ...f, [n]: v }))} />
             <div className="grid grid-cols-2 gap-3">
               <Field label="Endereço" name="address" value={form.address} editing={editingProfile}
