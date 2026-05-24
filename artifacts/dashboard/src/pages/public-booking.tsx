@@ -135,6 +135,7 @@ export default function PublicBookingPage() {
   // Availability
   const [availability, setAvailability] = useState<{ scheduledAt: string; durationMinutes: number }[]>([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Fetch availability whenever date changes while on the form step
   useEffect(() => {
@@ -290,7 +291,6 @@ export default function PublicBookingPage() {
 
   const { tenant, services } = data;
   const initial = tenant.name.charAt(0).toUpperCase();
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   function buildWhatsAppText() {
     const dateLabel = new Date(form.date + "T12:00:00").toLocaleDateString("pt-BR", {
