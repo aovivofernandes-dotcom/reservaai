@@ -60,7 +60,7 @@ function displayCurrency(digits: string): string {
 }
 
 function getPublicLink(slug: string): string {
-  return `${window.location.origin}/api/share/${slug}`;
+  return `${window.location.origin}/${slug}`;
 }
 
 interface ServiceForm {
