@@ -653,7 +653,7 @@ export default function BusinessSettingsPage() {
           {/* Action buttons */}
           <div className="grid grid-cols-3 gap-2">
             <button onClick={() => {
-              navigator.clipboard.writeText(bookingLink).then(() => {
+              navigator.clipboard.writeText(shareLink).then(() => {
                 setCopied(true); setTimeout(() => setCopied(false), 2000);
               });
             }}
