@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import {
   Clock,
@@ -20,6 +20,7 @@ interface TenantInfo {
   name: string;
   slug: string;
   businessType: string | null;
+  description: string | null;
   phone: string | null;
   address: string | null;
   logoUrl: string | null;
@@ -289,6 +290,7 @@ export default function PublicBookingPage() {
 
   const { tenant, services } = data;
   const initial = tenant.name.charAt(0).toUpperCase();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   function buildWhatsAppText() {
     const dateLabel = new Date(form.date + "T12:00:00").toLocaleDateString("pt-BR", {
@@ -616,44 +618,80 @@ export default function PublicBookingPage() {
   // ── Services list ─────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-50">
-      {/* ── Hero header — shrinks to fit, never scrolls ── */}
+      {/* ── Hero — full-bleed logo/photo ── */}
       <div
-        className="shrink-0 bg-gradient-to-b from-violet-700 to-violet-600"
-        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
-      >
-        <div className="max-w-lg mx-auto px-4 pt-8 pb-7 w-full">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-xl shadow-violet-900/30 mb-4 border-2 border-white/30">
-              {tenant.logoUrl
-                ? <img src={tenant.logoUrl} alt={tenant.name} className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <span className="text-white font-black text-3xl">{initial}</span>
-                  </div>
+        className="shrink-0 relative overflow-hidden"
+        style={{
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          minHeight: 300,
+          ...(tenant.logoUrl
+            ? {
+                backgroundImage: `url(${tenant.logoUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
               }
-            </div>
-            <h1 className="text-white font-black text-2xl tracking-tight leading-tight">
-              {tenant.name}
-            </h1>
-            <p className="text-violet-200 text-sm mt-1.5 font-medium">
-              Agende seu horário em menos de 1 minuto
+            : {}),
+        }}
+      >
+        {/* Purple gradient fallback — shown only when no logo */}
+        {!tenant.logoUrl && (
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-700 via-violet-600 to-purple-800" />
+        )}
+
+        {/* Dark vignette overlay for text readability */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: tenant.logoUrl
+              ? "linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.46) 55%, rgba(0,0,0,0.84) 100%)"
+              : "linear-gradient(to bottom, rgba(0,0,0,0.0) 30%, rgba(0,0,0,0.38) 100%)",
+          }}
+        />
+
+        {/* Content anchored to bottom of hero */}
+        <div
+          className="relative z-10 max-w-lg mx-auto px-5 w-full flex flex-col justify-end"
+          style={{ minHeight: 300, paddingBottom: 28, paddingTop: 48 }}
+        >
+          <h1 className="text-white font-black text-[28px] leading-tight tracking-tight"
+              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.45)" }}>
+            {tenant.name}
+          </h1>
+
+          {(tenant.description || tenant.businessType) && (
+            <p className="text-white/88 text-sm mt-1.5 leading-relaxed font-medium line-clamp-2"
+               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.40)" }}>
+              {tenant.description ?? tenant.businessType}
             </p>
+          )}
+
+          <div className="flex items-center gap-3 mt-5 flex-wrap">
             {tenant.phone && (
               <a
                 href={`https://wa.me/${tenant.phone.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/25 text-white text-xs font-semibold hover:bg-white/25 transition-colors backdrop-blur-sm"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold text-white shadow-lg transition-opacity hover:opacity-90 active:opacity-75"
+                style={{ background: "linear-gradient(135deg,#25D366 0%,#128C7E 100%)" }}
               >
-                <MessageCircle className="w-3.5 h-3.5" />
-                Falar no WhatsApp
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
               </a>
             )}
+            <button
+              onClick={() => scrollRef.current?.scrollBy({ top: 400, behavior: "smooth" })}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-white text-violet-700 text-sm font-bold shadow-lg hover:bg-violet-50 active:scale-95 transition-all"
+            >
+              Agendar agora
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* ── Scrollable services list ── */}
       <div
+        ref={scrollRef}
         className="flex-1 overflow-y-auto"
         style={{ WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}
       >
