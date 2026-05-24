@@ -439,6 +439,8 @@ export default function BusinessSettingsPage() {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const bookingLink = `${getOrigin()}/onboard/${slugEdit || (tenant?.slug ?? "")}`;
+  // shareLink uses the server-rendered page with OG meta tags (for WhatsApp/social preview)
+  const shareLink = `${getOrigin()}/share/${slugEdit || (tenant?.slug ?? "")}`;
   const planLabel   = tenant?.plan === "pro" ? "Pro" : tenant?.plan === "enterprise" ? "Premium" : "Starter";
   const trialDays   = tenant?.trialEndsAt ? Math.max(0, Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000)) : null;
 
@@ -658,9 +660,9 @@ export default function BusinessSettingsPage() {
             </button>
             <button onClick={() => {
               if (navigator.share) {
-                void navigator.share({ title: "Agende aqui", url: bookingLink });
+                void navigator.share({ title: `${form.name || "Agende aqui"} — ReservaAI`, url: shareLink });
               } else {
-                navigator.clipboard.writeText(bookingLink);
+                navigator.clipboard.writeText(shareLink);
                 showToast("Link copiado para compartilhar");
               }
             }}
