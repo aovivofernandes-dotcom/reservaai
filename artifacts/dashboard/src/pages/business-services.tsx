@@ -264,7 +264,9 @@ export default function BusinessServicesPage() {
     "w-full border border-gray-200 rounded-xl px-4 py-3 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 transition-colors bg-white";
   const labelCls = "text-gray-700 text-[12px] font-semibold block mb-1.5 tracking-wide";
 
-  const whatsappText = encodeURIComponent(`Agende seu horário online:\n${publicLink}`);
+  // Use /share/:slug for WhatsApp so the preview shows OG tags (logo, name, description)
+  const shareUrl = slug ? `${window.location.origin}/share/${slug}` : "";
+  const whatsappText = encodeURIComponent(`Agende seu horário online:\n${shareUrl || publicLink}`);
 
   return (
     <BusinessLayout title="Serviços">
