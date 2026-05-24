@@ -52,10 +52,10 @@ function priceNum(price: string) {
 }
 
 function durationLabel(mins: number) {
-  if (mins < 60) return `${mins} min`;
+  if (mins < 60) return `aprox. ${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  return m > 0 ? `aprox. ${h}h ${m}min` : `aprox. ${h}h`;
 }
 
 function generateTimeSlots(): string[] {
@@ -306,8 +306,12 @@ export default function PublicBookingPage() {
     });
     return (
       <div
-        className="min-h-screen bg-gradient-to-b from-violet-50 to-white flex flex-col items-center justify-center px-5 text-center"
-        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom, 0px))" }}
+        className="flex flex-col items-center justify-center px-5 text-center bg-gradient-to-b from-violet-50 to-white"
+        style={{
+          minHeight: "100dvh",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingBottom: "max(2rem, env(safe-area-inset-bottom, 0px))",
+        }}
       >
         <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-emerald-100">
           <CheckCircle2 className="w-12 h-12 text-emerald-500" />
