@@ -84,10 +84,10 @@ function Toast({ msg, type, onClose }: { msg: string; type: "success"|"error"; o
       background: type === "success" ? "#059669" : "#dc2626",
       color: "#fff", borderRadius: 14, padding: "12px 18px",
       fontSize: 14, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
-      display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap",
+      display: "flex", alignItems: "flex-start", gap: 10,
     }}>
-      {type === "success" ? <Check className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{msg}</span>
+      {type === "success" ? <Check className="w-4 h-4 shrink-0 mt-0.5" /> : <X className="w-4 h-4 shrink-0 mt-0.5" />}
+      <span style={{ lineHeight: 1.4 }}>{msg}</span>
     </div>
   );
 }
@@ -317,7 +317,7 @@ export default function BusinessSettingsPage() {
 
   // ── Logo upload ───────────────────────────────────────────────────────────
 
-  function compressImage(dataUrl: string, maxPx = 800): Promise<string> {
+  function compressImage(dataUrl: string, maxPx = 1200): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -332,13 +332,13 @@ export default function BusinessSettingsPage() {
         const ctx = canvas.getContext("2d");
         if (!ctx) { reject(new Error("canvas")); return; }
         ctx.drawImage(img, 0, 0, width, height);
-        // try progressively lower quality until under 500 KB
-        const qualities = [0.85, 0.70, 0.55, 0.40];
+        // try progressively lower quality until under 2 MB (base64 string)
+        const qualities = [0.8, 0.65, 0.5, 0.35];
         for (const q of qualities) {
           const out = canvas.toDataURL("image/jpeg", q);
-          if (out.length < 700_000 || q === 0.40) { resolve(out); return; }
+          if (out.length < 2_000_000 || q === 0.35) { resolve(out); return; }
         }
-        resolve(canvas.toDataURL("image/jpeg", 0.40));
+        resolve(canvas.toDataURL("image/jpeg", 0.35));
       };
       img.onerror = () => reject(new Error("load"));
       img.src = dataUrl;
@@ -346,9 +346,8 @@ export default function BusinessSettingsPage() {
   }
 
   async function handleLogoFile(file: File) {
-    // Reject only truly gigantic files (> 10 MB) — everything else gets compressed
     if (file.size > 10_485_760) {
-      showToast("Arquivo muito grande. Máximo 10MB.", "error");
+      showToast("Imagem acima de 10MB. Escolha uma foto menor.", "error");
       return;
     }
     setLogoCompressing(true);
@@ -361,12 +360,20 @@ export default function BusinessSettingsPage() {
       });
       const compressed = await compressImage(raw);
       setLogoUrl(compressed);
-      showToast("Logo atualizada com sucesso");
+      // auto-save logo immediately so it persists after page reload
+      try {
+        await apiFetch("/api/business/profile", {
+          method: "PUT",
+          body: JSON.stringify({ logoUrl: compressed }),
+        });
+        showToast("Logo salva com sucesso");
+      } catch {
+        showToast("Logo carregada. Clique em Salvar para confirmar.", "error");
+      }
     } catch {
       showToast("Não foi possível processar a imagem. Tente outro arquivo.", "error");
     } finally {
       setLogoCompressing(false);
-      // reset input so same file can be re-selected
       if (logoInputRef.current) logoInputRef.current.value = "";
     }
   }
@@ -552,7 +559,7 @@ export default function BusinessSettingsPage() {
           )}
 
           <input ref={logoInputRef} type="file"
-            accept="image/*,.heic,.heif"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
             className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} />
 
