@@ -264,6 +264,7 @@ export default function BusinessSettingsPage() {
           setTenant(parsed);
           setForm(f => ({ ...f, name: parsed.name, phone: parsed.phone ?? "", email: parsed.email }));
           setSlugEdit(parsed.slug);
+          setLogoUrl(parsed.logoUrl ?? "");
         }
         if (u) {
           const parsed = JSON.parse(u) as UserData;
@@ -362,10 +363,13 @@ export default function BusinessSettingsPage() {
       setLogoUrl(compressed);
       // auto-save logo immediately so it persists after page reload
       try {
-        await apiFetch("/api/business/profile", {
+        const saved = await apiFetch("/api/business/profile", {
           method: "PUT",
           body: JSON.stringify({ logoUrl: compressed }),
-        });
+        }) as { tenant: TenantData; user: UserData };
+        // Sync tenant state + localStorage so reload always shows the new logo
+        setTenant(saved.tenant);
+        localStorage.setItem("business_tenant", JSON.stringify(saved.tenant));
         showToast("Logo salva com sucesso");
       } catch {
         showToast("Logo carregada. Clique em Salvar para confirmar.", "error");
