@@ -225,7 +225,7 @@ export default function BusinessDashboardPage() {
   const { tenant } = dashboard;
   const firstName = user?.name?.split(" ")[0] ?? tenant.name.split(" ")[0];
   const days = trialDaysLeft(tenant.trialEndsAt);
-  const bookingLink = `${window.location.origin}/api/share/${tenant.slug}`;
+  const bookingLink = `${window.location.origin}/${tenant.slug}`;
   const isTrialing = !!tenant.trialEndsAt && days >= 0;
   const isPaidPlan = tenant.plan === "pro" || tenant.plan === "premium";
 
