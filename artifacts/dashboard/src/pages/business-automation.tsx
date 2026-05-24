@@ -17,7 +17,6 @@ import {
   QrCode,
   X,
   ScanLine,
-  Wrench,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -49,6 +48,7 @@ interface WhatsAppStatus {
   completedSessions: number;
   lastActivityAt: string | null;
   recentSessions: RecentSession[];
+  tenantPhone: string | null;
 }
 
 type QrState = "idle" | "loading" | "qr" | "connected" | "error";
@@ -595,33 +595,47 @@ export default function BusinessAutomationPage() {
             )}
           </div>
         ) : status?.evoConfigured === false ? (
-          /* ── NOT CONFIGURED (API not set up) ── */
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          /* ── DIRECT LINK (API not set up – wa.me mode) ── */
+          <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl overflow-hidden shadow-sm">
             <div className="p-5 flex items-start gap-4">
-              <div className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center shrink-0">
-                <Wrench className="w-5 h-5 text-gray-400" />
+              <div className="w-11 h-11 rounded-2xl bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5 text-[#25D366]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-gray-900 font-bold text-sm">WhatsApp em configuração</p>
-                <p className="text-gray-400 text-xs mt-1 leading-relaxed">
-                  Nossa equipe está configurando a conexão WhatsApp para sua conta.
-                  Em breve você receberá um aviso para ativar.
+                <p className="text-green-800 font-bold text-sm">WhatsApp conectado</p>
+                <p className="text-green-700/70 text-xs mt-1 leading-relaxed">
+                  Seu sistema usa link direto para enviar confirmações e comprovantes pelo WhatsApp.
                 </p>
               </div>
+              <span className="flex items-center gap-1 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
+                <span className="text-[#16a34a] text-xs font-semibold">ativo</span>
+              </span>
             </div>
-            <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <p className="text-xs text-gray-500">
-                Precisa de ajuda?{" "}
-                <a
-                  href="https://wa.me/5592992208060?text=Ol%C3%A1%20preciso%20de%20ajuda%20com%20o%20WhatsApp%20do%20ReservaAI"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold text-[#25D366] hover:underline"
-                >
-                  Fale com o suporte
-                </a>
-              </p>
+            <div className="border-t border-[#bbf7d0] px-5 py-3 flex items-center gap-3 flex-wrap">
+              {status?.tenantPhone && (
+                <>
+                  <a
+                    href={`https://wa.me/55${status.tenantPhone.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Estou testando o WhatsApp do ReservaAI.")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-900 transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    Testar WhatsApp
+                  </a>
+                  <span className="text-green-300">·</span>
+                </>
+              )}
+              <a
+                href="https://wa.me/5592992208060?text=Ol%C3%A1%20preciso%20de%20ajuda%20com%20o%20WhatsApp%20do%20ReservaAI"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] hover:text-green-900 transition-colors"
+              >
+                <WhatsAppIcon className="w-3 h-3" />
+                Fale com o suporte
+              </a>
             </div>
           </div>
         ) : (
@@ -744,6 +758,7 @@ export default function BusinessAutomationPage() {
                     "flex items-center gap-3.5 px-4 py-3.5",
                     i === 0 && "rounded-t-2xl",
                     i === AUTOMATIONS.length - 1 && "rounded-b-2xl",
+                    !isConnected && "opacity-60",
                   )}
                 >
                   <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", item.color)}>
@@ -753,23 +768,42 @@ export default function BusinessAutomationPage() {
                     <p className="text-gray-900 text-sm font-semibold leading-none">{item.title}</p>
                     <p className="text-gray-400 text-[11px] mt-1 leading-snug line-clamp-1">{item.description}</p>
                   </div>
-                  <div
-                    className={cn(
-                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
-                      active ? "bg-[#25D366]" : "bg-gray-200",
-                    )}
-                  >
-                    <span
+                  {isConnected ? (
+                    <div
                       className={cn(
-                        "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform",
-                        active ? "translate-x-6" : "translate-x-1",
+                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
+                        active ? "bg-[#25D366]" : "bg-gray-200",
                       )}
-                    />
-                  </div>
+                    >
+                      <span
+                        className={cn(
+                          "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform",
+                          active ? "translate-x-6" : "translate-x-1",
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0 bg-violet-50 text-violet-600 border border-violet-100 whitespace-nowrap">
+                      Plano Pro
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
+          {!isConnected && (
+            <p className="text-[11px] text-gray-400 px-1 mt-2 text-center">
+              Automações avançadas disponíveis com a API oficial do WhatsApp Business.{" "}
+              <a
+                href="https://wa.me/5592992208060?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20as%20automa%C3%A7%C3%B5es%20do%20plano%20Pro"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-[#25D366] hover:underline"
+              >
+                Falar com suporte
+              </a>
+            </p>
+          )}
         </div>
 
       </div>
