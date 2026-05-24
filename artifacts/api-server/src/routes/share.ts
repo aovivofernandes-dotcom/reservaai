@@ -59,6 +59,7 @@ router.get(
         businessType: tenantsTable.businessType,
         description: tenantsTable.description,
         logoUrl: tenantsTable.logoUrl,
+        updatedAt: tenantsTable.updatedAt,
       })
       .from(tenantsTable)
       .where(eq(tenantsTable.slug, slug));
@@ -91,7 +92,9 @@ router.get(
 
     const bookingUrl = `${origin}/onboard/${slug}`;
     const shareUrl = `${origin}/share/${slug}`;
-    const imageUrl = `${origin}/og/${slug}.png`;
+    // Cache-busting: append updatedAt timestamp so WhatsApp re-fetches when logo changes
+    const imgVer = tenant.updatedAt.getTime();
+    const imageUrl = `${origin}/og/${slug}.png?v=${imgVer}`;
 
     const servicesDesc =
       services.length > 0 ? services.map((s) => s.name).join(", ") : null;
