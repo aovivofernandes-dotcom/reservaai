@@ -69,6 +69,25 @@ function generateTimeSlots(): string[] {
 
 const TIME_SLOTS = generateTimeSlots();
 
+// Pure helper: is slot HH:MM blocked given existing bookings and new booking duration?
+function isSlotBlockedFn(
+  slot: string,
+  durationMins: number,
+  booked: { scheduledAt: string; durationMinutes: number }[],
+): boolean {
+  if (!slot) return false;
+  const [h, m] = slot.split(":").map(Number);
+  const slotStart = h * 60 + m;
+  const slotEnd = slotStart + Math.max(durationMins, 30);
+  for (const appt of booked) {
+    const d = new Date(appt.scheduledAt);
+    const apptStart = d.getHours() * 60 + d.getMinutes();
+    const apptEnd = apptStart + appt.durationMinutes;
+    if (slotStart < apptEnd && apptStart < slotEnd) return true;
+  }
+  return false;
+}
+
 function todayISO() {
   return new Date().toISOString().split("T")[0];
 }
@@ -110,6 +129,37 @@ export default function PublicBookingPage() {
   const [form, setForm] = useState(emptyForm());
   const [booking, setBooking] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Availability
+  const [availability, setAvailability] = useState<{ scheduledAt: string; durationMinutes: number }[]>([]);
+  const [loadingAvail, setLoadingAvail] = useState(false);
+
+  // Fetch availability whenever date changes while on the form step
+  useEffect(() => {
+    if (!slug || step !== "form" || !form.date) return;
+    let cancelled = false;
+    setLoadingAvail(true);
+    fetch(`/api/public/booking/${slug}/availability?date=${form.date}`)
+      .then((r) => r.json())
+      .then((d: { appointments?: { scheduledAt: string; durationMinutes: number }[] }) => {
+        if (cancelled) return;
+        setAvailability(d.appointments ?? []);
+      })
+      .catch(() => { if (!cancelled) setAvailability([]); })
+      .finally(() => { if (!cancelled) setLoadingAvail(false); });
+    return () => { cancelled = true; };
+  }, [slug, form.date, step]);
+
+  // When availability loads, if the selected time is now blocked — pick the first free slot
+  useEffect(() => {
+    if (loadingAvail) return;
+    const dur = selectedServices.reduce((s, sv) => s + sv.durationMinutes, 0) || 30;
+    if (isSlotBlockedFn(form.time, dur, availability)) {
+      const first = TIME_SLOTS.find((s) => !isSlotBlockedFn(s, dur, availability));
+      setForm((f) => ({ ...f, time: first ?? "" }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availability, loadingAvail]);
 
   useEffect(() => {
     if (!slug) return;
@@ -155,7 +205,9 @@ export default function PublicBookingPage() {
   const allFree = selectedServices.every((s) => priceNum(s.price) === 0);
   const formReady =
     form.clientName.trim().length > 0 &&
-    form.clientPhone.trim().length >= 14; // (XX) XXXXX-XXXX
+    form.clientPhone.trim().length >= 14 && // (XX) XXXXX-XXXX
+    form.time.length > 0 &&
+    !isSlotBlockedFn(form.time, totalDuration || 30, availability);
 
   async function submitBooking() {
     setFormError("");
@@ -177,6 +229,7 @@ export default function PublicBookingPage() {
               serviceId: service.id,
               scheduledAt,
               notes: form.notes.trim() || null,
+              totalDurationMinutes: totalDuration || service.durationMinutes,
             }),
           })
         )
@@ -419,22 +472,68 @@ export default function PublicBookingPage() {
               />
             </div>
 
-            {/* ── Horário (full width, separate row) ── */}
+            {/* ── Horário ── */}
             <div>
-              <label className="text-gray-700 text-[13px] font-bold block mb-2">
-                <Clock className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
-                Horário <span className="text-violet-500">*</span>
-              </label>
-              <select
-                value={form.time}
-                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                className={INPUT}
-                style={INPUT_H}
-              >
-                {TIME_SLOTS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-gray-700 text-[13px] font-bold">
+                  <Clock className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+                  Horário <span className="text-violet-500">*</span>
+                </label>
+                {loadingAvail && (
+                  <span className="flex items-center gap-1 text-[11px] text-violet-500 font-medium">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Verificando disponibilidade…
+                  </span>
+                )}
+              </div>
+
+              {loadingAvail ? (
+                /* Skeleton while loading */
+                <div className="grid grid-cols-4 gap-2">
+                  {Array.from({ length: 16 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-11 rounded-xl bg-gray-100 animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {TIME_SLOTS.map((slot) => {
+                    const blocked = isSlotBlockedFn(slot, totalDuration || 30, availability);
+                    const selected = form.time === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={blocked}
+                        onClick={() => !blocked && setForm((f) => ({ ...f, time: slot }))}
+                        className={[
+                          "flex flex-col items-center justify-center rounded-xl py-2 text-[13px] font-semibold transition-all select-none",
+                          blocked
+                            ? "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed opacity-60"
+                            : selected
+                              ? "bg-violet-600 text-white border border-violet-600 shadow-md shadow-violet-200 scale-[1.03]"
+                              : "bg-white text-gray-700 border border-gray-200 hover:border-violet-400 hover:bg-violet-50 active:scale-[0.97]",
+                        ].join(" ")}
+                      >
+                        <span>{slot}</span>
+                        {blocked && (
+                          <span className="text-[9px] font-medium mt-0.5 text-gray-300">
+                            Indisponível
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!loadingAvail && availability.length > 0 && !form.time && (
+                <p className="text-amber-600 text-xs font-medium mt-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  Todos os horários estão ocupados nesta data. Tente outro dia.
+                </p>
+              )}
             </div>
 
             {/* ── Observação ── */}
