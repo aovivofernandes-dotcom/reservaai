@@ -140,6 +140,7 @@ router.get(
         businessType: tenantsTable.businessType,
         phone: tenantsTable.phone,
         address: tenantsTable.address,
+        logoUrl: tenantsTable.logoUrl,
       })
       .from(tenantsTable)
       .where(eq(tenantsTable.slug, slug));
@@ -168,6 +169,7 @@ router.get(
         businessType: tenant.businessType ?? null,
         phone: tenant.phone ?? null,
         address: tenant.address ?? null,
+        logoUrl: tenant.logoUrl ?? null,
       },
       services: services.map((s) => ({
         id: s.id,
