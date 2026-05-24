@@ -24,9 +24,11 @@ function WhatsAppSvg({ className }: { className?: string }) {
   );
 }
 
-function ShareModal({ link, onClose }: { link: string; onClose: () => void }) {
+function ShareModal({ link, shareLink, onClose }: { link: string; shareLink?: string; onClose: () => void }) {
   const [linkCopied, setLinkCopied] = useState(false);
-  const waText = encodeURIComponent(`Agende seu horário online: ${link}`);
+  // shareLink has server-rendered OG tags for WhatsApp preview; link is the clean direct URL
+  const waUrl = shareLink ?? link;
+  const waText = encodeURIComponent(`Agende seu horário online: ${waUrl}`);
 
   function handleCopy() {
     navigator.clipboard.writeText(link).then(() => {
@@ -549,7 +551,7 @@ export default function BusinessDashboardPage() {
       </div>
     </BusinessLayout>
     {showShareModal && (
-      <ShareModal link={bookingLink} onClose={() => setShowShareModal(false)} />
+      <ShareModal link={bookingLink} shareLink={`${window.location.origin}/share/${tenant.slug}`} onClose={() => setShowShareModal(false)} />
     )}
     </>
   );
