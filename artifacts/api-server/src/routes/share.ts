@@ -1,9 +1,17 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, tenantsTable, servicesTable } from "@workspace/db";
 import { generateOgPng } from "../lib/og-image";
 
 const router: IRouter = Router();
+
+// Bot User-Agents used by WhatsApp, Telegram, Facebook, Twitter, Slack, Discord, LinkedIn…
+const BOT_RE =
+  /facebookexternalhit|FacebookBot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterestbot|Applebot|bingbot|Googlebot|DuckDuckBot|Baiduspider|YandexBot|SemrushBot|AhrefsBot|ia_archiver/i;
+
+function isBot(req: Request): boolean {
+  return BOT_RE.test(req.get("user-agent") ?? "");
+}
 
 function esc(str: string): string {
   return str
@@ -13,105 +21,73 @@ function esc(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-// ── Dynamic OG image per business — PNG 1200×630 ─────────────────────────────
+/**
+ * Returns the canonical public origin for this deployment.
+ *
+ * Priority:
+ *  1. REPLIT_DOMAINS env var (most reliable in production — always HTTPS public domain)
+ *  2. x-forwarded-proto + host headers (works behind most reverse proxies)
+ *  3. Hardcoded https fallback
+ */
+function getPublicOrigin(req: Request): string {
+  const replitDomains = process.env.REPLIT_DOMAINS;
+  if (replitDomains) {
+    const primary = replitDomains.split(",")[0]?.trim();
+    if (primary) return `https://${primary}`;
+  }
+  const proto = req.get("x-forwarded-proto") ?? req.protocol ?? "https";
+  const host = req.get("host") ?? "localhost";
+  return `${proto}://${host}`;
+}
 
-router.get(
-  "/og/:slug.png",
-  async (req, res): Promise<void> => {
-    const { slug } = req.params as { slug: string };
+// ── Shared HTML builder ────────────────────────────────────────────────────────
+// Used by both /share/:slug and /onboard/:slug (for bots).
 
-    const [tenant] = await db
-      .select({
-        name: tenantsTable.name,
-        description: tenantsTable.description,
-        logoUrl: tenantsTable.logoUrl,
-      })
-      .from(tenantsTable)
-      .where(eq(tenantsTable.slug, slug));
+interface TenantShareData {
+  name: string;
+  slug: string;
+  businessType: string | null;
+  description: string | null;
+  logoUrl: string | null;
+  updatedAt: Date;
+}
 
-    const png = generateOgPng(
-      tenant?.name ?? "Seu negócio",
-      tenant?.description ?? undefined,
-      tenant?.logoUrl ?? undefined,
-    );
+interface ShareService {
+  name: string;
+}
 
-    res.setHeader("Content-Type", "image/png");
-    // 5-min cache: allows re-scrape when business updates profile
-    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
-    res.send(png);
-  },
-);
+function buildShareHtml(
+  tenant: TenantShareData,
+  services: ShareService[],
+  origin: string,
+): string {
+  const businessName = tenant.name;
+  const initial = businessName.charAt(0).toUpperCase();
+  const businessType = tenant.businessType ?? "Agendamento online";
+  const description = tenant.description ?? "";
+  const logoUrl = tenant.logoUrl ?? "";
+  const slug = tenant.slug;
 
-// ── Social share page — returns real HTML with per-business OG meta tags ──────
-// Crawlers (WhatsApp, Telegram, Facebook…) read OG from this URL.
-// Human browsers are immediately JS-redirected to /onboard/:slug.
+  const bookingUrl = `${origin}/onboard/${slug}`;
+  const shareUrl = `${origin}/share/${slug}`;
+  const imgVer = tenant.updatedAt.getTime();
+  const imageUrl = `${origin}/og/${slug}.png?v=${imgVer}`;
 
-router.get(
-  "/share/:slug",
-  async (req, res): Promise<void> => {
-    const { slug } = req.params as { slug: string };
+  const servicesDesc =
+    services.length > 0 ? services.map((s) => s.name).join(", ") : null;
 
-    const [tenant] = await db
-      .select({
-        id: tenantsTable.id,
-        name: tenantsTable.name,
-        slug: tenantsTable.slug,
-        businessType: tenantsTable.businessType,
-        description: tenantsTable.description,
-        logoUrl: tenantsTable.logoUrl,
-        updatedAt: tenantsTable.updatedAt,
-      })
-      .from(tenantsTable)
-      .where(eq(tenantsTable.slug, slug));
+  const ogTitle = `${businessName} — Agende seu horário`;
+  const ogDescription = description
+    ? `${description}. Agendamento rápido e fácil.`
+    : servicesDesc
+      ? `${servicesDesc}. Agendamento rápido e fácil, sem precisar ligar.`
+      : `Agende com ${businessName} de forma rápida e fácil.`;
 
-    if (!tenant) {
-      res.status(404).send("<h1>Empresa não encontrada</h1>");
-      return;
-    }
+  const logoHtml = logoUrl
+    ? `<div class="logo-wrap"><img src="${logoUrl}" alt="${esc(businessName)}" class="logo-img"/></div>`
+    : `<div class="logo-placeholder">${initial}</div>`;
 
-    const services = await db
-      .select({ name: servicesTable.name })
-      .from(servicesTable)
-      .where(
-        and(
-          eq(servicesTable.tenantId, tenant.id),
-          eq(servicesTable.isActive, true),
-        ),
-      )
-      .limit(5);
-
-    const proto = req.get("x-forwarded-proto") ?? req.protocol ?? "https";
-    const host = req.get("host") ?? "admin-password.replit.app";
-    const origin = `${proto}://${host}`;
-
-    const businessName = tenant.name;
-    const initial = businessName.charAt(0).toUpperCase();
-    const businessType = tenant.businessType ?? "Agendamento online";
-    const description = tenant.description ?? "";
-    const logoUrl = tenant.logoUrl ?? "";
-
-    const bookingUrl = `${origin}/onboard/${slug}`;
-    const shareUrl = `${origin}/share/${slug}`;
-    // Cache-busting: append updatedAt timestamp so WhatsApp re-fetches when logo changes
-    const imgVer = tenant.updatedAt.getTime();
-    const imageUrl = `${origin}/og/${slug}.png?v=${imgVer}`;
-
-    const servicesDesc =
-      services.length > 0 ? services.map((s) => s.name).join(", ") : null;
-
-    const ogTitle = `${businessName} — Agende seu horário`;
-    const ogDescription = description
-      ? `${description}. Agendamento rápido e fácil.`
-      : servicesDesc
-        ? `${servicesDesc}. Agendamento rápido e fácil, sem precisar ligar.`
-        : `Agende com ${businessName} de forma rápida e fácil.`;
-
-    // Logo: use real photo if available, else show initial in purple circle
-    const logoHtml = logoUrl
-      ? `<div class="logo-wrap"><img src="${logoUrl}" alt="${esc(businessName)}" class="logo-img"/></div>`
-      : `<div class="logo-placeholder">${initial}</div>`;
-
-    const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -120,7 +96,7 @@ router.get(
   <meta name="description" content="${esc(ogDescription)}">
   <meta http-equiv="refresh" content="0; url=${bookingUrl}">
 
-  <!-- Open Graph -->
+  <!-- Open Graph (WhatsApp, Facebook, Telegram, LinkedIn…) -->
   <meta property="og:site_name" content="ReservaAI">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${shareUrl}">
@@ -134,13 +110,13 @@ router.get(
   <meta property="og:image:alt" content="${esc(businessName)}">
   <meta property="og:locale" content="pt_BR">
 
-  <!-- Twitter / WhatsApp -->
+  <!-- Twitter card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${esc(ogTitle)}">
   <meta name="twitter:description" content="${esc(ogDescription)}">
   <meta name="twitter:image" content="${imageUrl}">
 
-  <!-- Favicon dinâmico por empresa -->
+  <!-- Favicon -->
   <link rel="icon" href="${imageUrl}" type="image/png">
 
   <style>
@@ -196,9 +172,121 @@ router.get(
   </div>
 </body>
 </html>`;
+}
+
+// ── Helper: fetch tenant + services by slug ────────────────────────────────────
+async function fetchTenantData(slug: string) {
+  const [tenant] = await db
+    .select({
+      id: tenantsTable.id,
+      name: tenantsTable.name,
+      slug: tenantsTable.slug,
+      businessType: tenantsTable.businessType,
+      description: tenantsTable.description,
+      logoUrl: tenantsTable.logoUrl,
+      updatedAt: tenantsTable.updatedAt,
+    })
+    .from(tenantsTable)
+    .where(eq(tenantsTable.slug, slug));
+
+  if (!tenant) return null;
+
+  const services = await db
+    .select({ name: servicesTable.name })
+    .from(servicesTable)
+    .where(
+      and(
+        eq(servicesTable.tenantId, tenant.id),
+        eq(servicesTable.isActive, true),
+      ),
+    )
+    .limit(5);
+
+  return { tenant, services };
+}
+
+// ── Dynamic OG image per business — PNG 1200×630 ─────────────────────────────
+
+router.get(
+  "/og/:slug.png",
+  async (req, res): Promise<void> => {
+    const { slug } = req.params as { slug: string };
+
+    const [tenant] = await db
+      .select({
+        name: tenantsTable.name,
+        description: tenantsTable.description,
+        logoUrl: tenantsTable.logoUrl,
+      })
+      .from(tenantsTable)
+      .where(eq(tenantsTable.slug, slug));
+
+    const png = generateOgPng(
+      tenant?.name ?? "Seu negócio",
+      tenant?.description ?? undefined,
+      tenant?.logoUrl ?? undefined,
+    );
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
+    res.send(png);
+  },
+);
+
+// ── /share/:slug — canonical shareable URL with OG meta tags ─────────────────
+// Crawlers (WhatsApp, Telegram, Facebook…) read OG from this URL.
+// Human browsers are immediately JS-redirected to /onboard/:slug.
+
+router.get(
+  "/share/:slug",
+  async (req, res): Promise<void> => {
+    const { slug } = req.params as { slug: string };
+
+    const data = await fetchTenantData(slug);
+    if (!data) {
+      res.status(404).send("<h1>Empresa não encontrada</h1>");
+      return;
+    }
+
+    const origin = getPublicOrigin(req);
+    const html = buildShareHtml(data.tenant, data.services, origin);
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
+    // Short cache: bots re-scrape and get fresh OG image URL after logo change
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60");
+    res.send(html);
+  },
+);
+
+// ── /onboard/:slug — booking page entry point ─────────────────────────────────
+// When WhatsApp/Telegram/Facebook bots visit this URL (because it's what
+// users copy from the browser address bar), they get full OG meta tags.
+// Regular browsers are passed through to the SPA unchanged via a 302.
+
+router.get(
+  "/onboard/:slug",
+  async (req, res): Promise<void> => {
+    const { slug } = req.params as { slug: string };
+
+    if (!isBot(req)) {
+      // Let the SPA (dashboard) handle it — don't intercept real users
+      res.setHeader("Cache-Control", "no-store");
+      res.redirect(302, `/onboard/${slug}`);
+      return;
+    }
+
+    // Bot detected — serve OG-enriched HTML so WhatsApp can build a rich preview
+    const data = await fetchTenantData(slug);
+    if (!data) {
+      res.status(404).send("<h1>Empresa não encontrada</h1>");
+      return;
+    }
+
+    const origin = getPublicOrigin(req);
+    const html = buildShareHtml(data.tenant, data.services, origin);
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60");
     res.send(html);
   },
 );
