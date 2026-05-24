@@ -26,6 +26,17 @@ import { sendAppointmentConfirmation } from "../lib/whatsapp-notify";
 
 const router: IRouter = Router();
 
+// ── Backward-compat redirect: old /api/share/:slug → clean /:slug ─────────────
+// The route /api/share/:slug was removed when we added the root-level /share/:slug.
+// This redirect ensures old bookmarked/shared links never show "Cannot GET".
+router.get(
+  "/share/:slug",
+  (req, res): void => {
+    const { slug } = req.params as { slug: string };
+    res.redirect(301, `/${slug}`);
+  },
+);
+
 router.get(
   "/public/tenants/:slug",
   async (req, res): Promise<void> => {
