@@ -1,5 +1,14 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ne, gte, lt } from "drizzle-orm";
+import { eq, and, ne, gte, lt, sql } from "drizzle-orm";
+
+/**
+ * Convert a UUID string to a stable int64 for pg_advisory_xact_lock.
+ * We take the first 15 hex digits (60 bits) to stay safely within bigint range.
+ */
+function uuidToLockId(uuid: string): bigint {
+  const hex = uuid.replace(/-/g, "").slice(0, 15);
+  return BigInt("0x" + hex);
+}
 import {
   db,
   tenantsTable,
@@ -429,63 +438,79 @@ router.post(
     if (!newDuration) newDuration = 60;
 
     const newEnd = new Date(newStart.getTime() + newDuration * 60 * 1000);
-
-    // Query all non-cancelled appointments on the same UTC day
     const dayStart = new Date(`${body.scheduledAt.slice(0, 10)}T00:00:00.000Z`);
     const dayEnd = new Date(`${body.scheduledAt.slice(0, 10)}T23:59:59.999Z`);
 
-    const existing = await db
-      .select({
-        scheduledAt: appointmentsTable.scheduledAt,
-        endTime: appointmentsTable.endTime,
-        clientPhone: appointmentsTable.clientPhone,
-        totalDurationMinutes: appointmentsTable.totalDurationMinutes,
-        serviceDuration: servicesTable.durationMinutes,
-      })
-      .from(appointmentsTable)
-      .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
-      .where(
-        and(
-          eq(appointmentsTable.tenantId, tenant.id),
-          ne(appointmentsTable.status, "cancelled"),
-          gte(appointmentsTable.scheduledAt, dayStart),
-          lt(appointmentsTable.scheduledAt, dayEnd),
-        ),
-      );
+    // ── Atomic: advisory lock + conflict check + insert in one transaction ─────
+    // pg_advisory_xact_lock serialises concurrent requests for the same tenant,
+    // eliminating the check-then-insert race condition entirely.
+    let appointment: typeof appointmentsTable.$inferSelect;
+    try {
+      appointment = await db.transaction(async (tx) => {
+        // Lock scoped to this tenant — released automatically when tx ends
+        const lockId = uuidToLockId(tenant.id);
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockId}::bigint)`);
 
-    // Check overlap with appointments from a DIFFERENT client
-    for (const appt of existing) {
-      if (appt.clientPhone === body.clientPhone.trim()) continue; // same session (multi-service)
-      // Use stored end_time first, fall back to duration join, then default 60 min
-      const existEnd =
-        appt.endTime ??
-        new Date(
-          appt.scheduledAt.getTime() +
-            ((appt.totalDurationMinutes ?? appt.serviceDuration ?? 60) * 60 * 1000),
-        );
-      // Two intervals overlap: newStart < existEnd AND existStart < newEnd
-      if (newStart < existEnd && appt.scheduledAt < newEnd) {
+        // Re-check conflicts inside the lock
+        const existing = await tx
+          .select({
+            scheduledAt: appointmentsTable.scheduledAt,
+            endTime: appointmentsTable.endTime,
+            clientPhone: appointmentsTable.clientPhone,
+            totalDurationMinutes: appointmentsTable.totalDurationMinutes,
+            serviceDuration: servicesTable.durationMinutes,
+          })
+          .from(appointmentsTable)
+          .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
+          .where(
+            and(
+              eq(appointmentsTable.tenantId, tenant.id),
+              ne(appointmentsTable.status, "cancelled"),
+              gte(appointmentsTable.scheduledAt, dayStart),
+              lt(appointmentsTable.scheduledAt, dayEnd),
+            ),
+          );
+
+        for (const appt of existing) {
+          if (appt.clientPhone === body.clientPhone!.trim()) continue; // same session
+          const existEnd =
+            appt.endTime ??
+            new Date(
+              appt.scheduledAt.getTime() +
+                (appt.totalDurationMinutes ?? appt.serviceDuration ?? 60) * 60_000,
+            );
+          // Overlap: newStart < existEnd AND existStart < newEnd
+          if (newStart < existEnd && appt.scheduledAt < newEnd) {
+            throw Object.assign(new Error("conflict"), { isConflict: true });
+          }
+        }
+
+        const [inserted] = await tx
+          .insert(appointmentsTable)
+          .values({
+            tenantId: tenant.id,
+            serviceId: body.serviceId ?? null,
+            clientName: body.clientName!.trim(),
+            clientPhone: body.clientPhone!.trim(),
+            clientEmail: body.clientEmail?.trim() ?? null,
+            scheduledAt: newStart,
+            endTime: newEnd,
+            totalDurationMinutes: newDuration,
+            notes: body.notes?.trim() ?? null,
+          })
+          .returning();
+
+        return inserted;
+      });
+    } catch (err) {
+      if ((err as { isConflict?: boolean }).isConflict) {
         res.status(409).json({
           error: "Este horário já foi reservado. Escolha outro horário disponível.",
         });
         return;
       }
+      throw err;
     }
-
-    const [appointment] = await db
-      .insert(appointmentsTable)
-      .values({
-        tenantId: tenant.id,
-        serviceId: body.serviceId ?? null,
-        clientName: body.clientName.trim(),
-        clientPhone: body.clientPhone.trim(),
-        clientEmail: body.clientEmail?.trim() ?? null,
-        scheduledAt: newStart,
-        endTime: newEnd,
-        totalDurationMinutes: newDuration,
-        notes: body.notes?.trim() ?? null,
-      })
-      .returning();
 
     // Fire-and-forget — never blocks the client response
     void sendAppointmentConfirmation(appointment.id);
