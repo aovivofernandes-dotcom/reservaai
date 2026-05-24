@@ -438,8 +438,9 @@ export default function BusinessSettingsPage() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const bookingLink = `${getOrigin()}/onboard/${slugEdit || (tenant?.slug ?? "")}`;
-  // shareLink uses the server-rendered page with OG meta tags (for WhatsApp/social preview)
+  // bookingLink = clean URL shown to user and used for copy/open
+  const bookingLink = `${getOrigin()}/${slugEdit || (tenant?.slug ?? "")}`;
+  // shareLink = server-rendered page with OG meta tags (for WhatsApp/social preview)
   const shareLink = `${getOrigin()}/share/${slugEdit || (tenant?.slug ?? "")}`;
   const planLabel   = tenant?.plan === "pro" ? "Pro" : tenant?.plan === "enterprise" ? "Premium" : "Starter";
   const trialDays   = tenant?.trialEndsAt ? Math.max(0, Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000)) : null;
@@ -621,7 +622,7 @@ export default function BusinessSettingsPage() {
               <div>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Personalizar link</p>
                 <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3.5 h-11 text-sm">
-                  <span className="text-gray-400 shrink-0 hidden sm:inline">{getOrigin()}/onboard/</span>
+                  <span className="text-gray-400 shrink-0 hidden sm:inline">{getOrigin()}/</span>
                   <input
                     className="flex-1 min-w-0 bg-transparent text-gray-900 font-semibold focus:outline-none"
                     value={slugEdit}
