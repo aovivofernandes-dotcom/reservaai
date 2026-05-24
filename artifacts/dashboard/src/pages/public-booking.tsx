@@ -237,7 +237,24 @@ export default function PublicBookingPage() {
       const failed = responses.find((r) => !r.ok);
       if (failed) {
         const err = await failed.json() as { error?: string };
+        const isConflict = failed.status === 409;
         setFormError(err.error ?? "Erro ao agendar. Tente novamente.");
+        if (isConflict) {
+          // Re-fetch availability so the newly-blocked slot shows immediately
+          setForm((f) => ({ ...f, time: "" }));
+          setLoadingAvail(true);
+          try {
+            const avRes = await fetch(
+              `/api/public/booking/${slug}/availability?date=${form.date}`,
+            );
+            const avData = await avRes.json() as {
+              appointments?: { scheduledAt: string; durationMinutes: number }[];
+            };
+            setAvailability(avData.appointments ?? []);
+          } finally {
+            setLoadingAvail(false);
+          }
+        }
         return;
       }
       setStep("success");
