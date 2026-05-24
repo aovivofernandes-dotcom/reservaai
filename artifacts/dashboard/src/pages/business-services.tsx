@@ -47,10 +47,10 @@ function formatPrice(price: string) {
 }
 
 function durationLabel(mins: number) {
-  if (mins < 60) return `${mins} min`;
+  if (mins < 60) return `aprox. ${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  return m > 0 ? `aprox. ${h}h ${m}min` : `aprox. ${h}h`;
 }
 
 function displayCurrency(digits: string): string {
