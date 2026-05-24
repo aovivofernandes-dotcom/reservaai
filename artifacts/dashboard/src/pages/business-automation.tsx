@@ -19,6 +19,7 @@ import {
   ScanLine,
   Wifi,
   WifiOff,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BusinessLayout } from "@/components/business-layout";
@@ -452,6 +453,7 @@ export default function BusinessAutomationPage() {
 
   const isConnected = Boolean(status?.tenantPhoneNumberId);
   const hasActivity = (status?.totalSessions ?? 0) > 0;
+  const [proModal, setProModal] = useState(false);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -750,15 +752,15 @@ export default function BusinessAutomationPage() {
           <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-50 overflow-hidden">
             {AUTOMATIONS.map((item, i) => {
               const Icon = item.icon;
-              const active = isConnected && (status?.automationsEnabled ?? false);
               return (
-                <div
+                <button
                   key={item.title}
+                  type="button"
+                  onClick={() => setProModal(true)}
                   className={cn(
-                    "flex items-center gap-3.5 px-4 py-3.5",
+                    "w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-100",
                     i === 0 && "rounded-t-2xl",
                     i === AUTOMATIONS.length - 1 && "rounded-b-2xl",
-                    !isConnected && "opacity-60",
                   )}
                 >
                   <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", item.color)}>
@@ -768,26 +770,10 @@ export default function BusinessAutomationPage() {
                     <p className="text-gray-900 text-sm font-semibold leading-none">{item.title}</p>
                     <p className="text-gray-400 text-[11px] mt-1 leading-snug line-clamp-1">{item.description}</p>
                   </div>
-                  {isConnected ? (
-                    <div
-                      className={cn(
-                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
-                        active ? "bg-[#25D366]" : "bg-gray-200",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform",
-                          active ? "translate-x-6" : "translate-x-1",
-                        )}
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0 bg-violet-50 text-violet-600 border border-violet-100 whitespace-nowrap">
-                      Plano Pro
-                    </span>
-                  )}
-                </div>
+                  <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0 bg-violet-50 text-violet-600 border border-violet-100 whitespace-nowrap">
+                    Plano Pro
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -810,6 +796,48 @@ export default function BusinessAutomationPage() {
 
       {/* QR Modal */}
       {qrModal && <QrModal qrState={qrState} qrCode={qrCode} onClose={closeQrModal} />}
+
+      {/* Pro Feature Modal */}
+      {proModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            style={{ backdropFilter: "blur(4px)" }}
+            onClick={() => setProModal(false)}
+          />
+          <div className="relative z-10 bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-sm overflow-hidden shadow-2xl">
+            <div className="p-6 flex flex-col items-center text-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center">
+                <Zap className="w-7 h-7 text-violet-500" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-[15px]">Recurso do Plano Pro</p>
+                <p className="text-gray-500 text-sm mt-2 leading-relaxed max-w-[280px] mx-auto">
+                  Este recurso será ativado com a API oficial do WhatsApp Business.
+                </p>
+              </div>
+              <a
+                href="https://wa.me/5592992208060?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20as%20automa%C3%A7%C3%B5es%20do%20plano%20Pro"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2.5 w-full rounded-2xl font-bold text-white text-sm transition-opacity hover:opacity-90 active:opacity-80"
+                style={{ height: 48, background: "linear-gradient(135deg,#25D366 0%,#128C7E 100%)" }}
+              >
+                <WhatsAppIcon className="w-5 h-5" />
+                Falar com suporte
+              </a>
+              <button
+                onClick={() => setProModal(false)}
+                className="text-gray-400 text-sm hover:text-gray-600 transition-colors pb-1"
+              >
+                Fechar
+              </button>
+            </div>
+            <div style={{ height: "max(0px, env(safe-area-inset-bottom, 0px))" }} />
+          </div>
+        </div>,
+        document.body,
+      )}
     </BusinessLayout>
   );
 }
