@@ -709,31 +709,54 @@ export default function BusinessServicesPage() {
                   autoComplete="off"
                 />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label className={labelCls}>Preço</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={displayCurrency(form.priceCents)}
-                    onChange={handlePriceInput}
-                    placeholder="R$ 0,00"
-                    className={inputCls}
-                    autoComplete="off"
-                  />
-                  <p style={{ color: "#9ca3af", fontSize: 10, marginTop: 4 }}>Vazio = grátis</p>
-                </div>
-                <div>
-                  <label className={labelCls}>Duração</label>
-                  <select
-                    value={form.durationMinutes}
-                    onChange={(e) => setForm((f) => ({ ...f, durationMinutes: parseInt(e.target.value) }))}
-                    className={inputCls}
-                  >
-                    {DURATIONS.map((d) => (
-                      <option key={d.value} value={d.value}>{d.label}</option>
-                    ))}
-                  </select>
+              <div>
+                <label className={labelCls}>Preço</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={displayCurrency(form.priceCents)}
+                  onChange={handlePriceInput}
+                  placeholder="R$ 0,00"
+                  className={inputCls}
+                  autoComplete="off"
+                />
+                <p style={{ color: "#9ca3af", fontSize: 10, marginTop: 4 }}>Vazio = grátis</p>
+              </div>
+
+              <div>
+                <label className={labelCls}>Duração</label>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: 8,
+                  marginTop: 6,
+                }}>
+                  {DURATIONS.map((d) => {
+                    const active = form.durationMinutes === d.value;
+                    return (
+                      <button
+                        key={d.value}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, durationMinutes: d.value }))}
+                        style={{
+                          padding: "9px 4px",
+                          borderRadius: 12,
+                          border: active ? "2px solid #7c3aed" : "1.5px solid #e5e7eb",
+                          background: active ? "#7c3aed" : "#fafafa",
+                          color: active ? "#fff" : "#374151",
+                          fontSize: 12,
+                          fontWeight: active ? 700 : 500,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          boxShadow: active ? "0 2px 8px rgba(124,58,237,0.25)" : "none",
+                          lineHeight: 1.2,
+                          textAlign: "center",
+                        }}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
