@@ -352,7 +352,9 @@ router.get(
     const rows = await db
       .select({
         scheduledAt: appointmentsTable.scheduledAt,
-        durationMinutes: servicesTable.durationMinutes,
+        endTime: appointmentsTable.endTime,
+        totalDurationMinutes: appointmentsTable.totalDurationMinutes,
+        serviceDuration: servicesTable.durationMinutes,
       })
       .from(appointmentsTable)
       .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
@@ -366,10 +368,18 @@ router.get(
       );
 
     res.json({
-      appointments: rows.map((r) => ({
-        scheduledAt: r.scheduledAt.toISOString(),
-        durationMinutes: r.durationMinutes ?? 60,
-      })),
+      appointments: rows.map((r) => {
+        // Prefer stored end_time; fall back to computing from stored/service duration
+        const dur = r.totalDurationMinutes ?? r.serviceDuration ?? 60;
+        const endTime =
+          r.endTime?.toISOString() ??
+          new Date(r.scheduledAt.getTime() + dur * 60 * 1000).toISOString();
+        return {
+          scheduledAt: r.scheduledAt.toISOString(),
+          endTime,
+          durationMinutes: dur,
+        };
+      }),
     });
   },
 );
@@ -427,8 +437,10 @@ router.post(
     const existing = await db
       .select({
         scheduledAt: appointmentsTable.scheduledAt,
+        endTime: appointmentsTable.endTime,
         clientPhone: appointmentsTable.clientPhone,
-        durationMinutes: servicesTable.durationMinutes,
+        totalDurationMinutes: appointmentsTable.totalDurationMinutes,
+        serviceDuration: servicesTable.durationMinutes,
       })
       .from(appointmentsTable)
       .leftJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
@@ -444,8 +456,13 @@ router.post(
     // Check overlap with appointments from a DIFFERENT client
     for (const appt of existing) {
       if (appt.clientPhone === body.clientPhone.trim()) continue; // same session (multi-service)
-      const existDur = appt.durationMinutes ?? 60;
-      const existEnd = new Date(appt.scheduledAt.getTime() + existDur * 60 * 1000);
+      // Use stored end_time first, fall back to duration join, then default 60 min
+      const existEnd =
+        appt.endTime ??
+        new Date(
+          appt.scheduledAt.getTime() +
+            ((appt.totalDurationMinutes ?? appt.serviceDuration ?? 60) * 60 * 1000),
+        );
       // Two intervals overlap: newStart < existEnd AND existStart < newEnd
       if (newStart < existEnd && appt.scheduledAt < newEnd) {
         res.status(409).json({
@@ -464,6 +481,8 @@ router.post(
         clientPhone: body.clientPhone.trim(),
         clientEmail: body.clientEmail?.trim() ?? null,
         scheduledAt: newStart,
+        endTime: newEnd,
+        totalDurationMinutes: newDuration,
         notes: body.notes?.trim() ?? null,
       })
       .returning();
